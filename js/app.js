@@ -920,6 +920,8 @@ body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans C
 .chapter{background:#fbf7ee;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px;page-break-inside:avoid;}
 .ch-title{font-size:20px;color:#2c3860;border-bottom:2px solid var(--line);padding-bottom:8px;margin:0 0 14px;}
 .ch-date{font-size:15px;color:var(--muted);font-weight:400;}
+.ch-open{font-size:15px;color:#7a5b1e;font-weight:700;margin-left:10px;text-decoration:none;border:1px solid #c9a24b;border-radius:8px;padding:2px 8px;}
+.ch-open:hover{background:#fdf8ec;}
 .sec{margin-bottom:20px;}
 .sec h2{font-size:17px;color:#7a5b1e;margin:0 0 4px;}
 .sec .q{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.6;}
@@ -1027,7 +1029,8 @@ window.openFullReport = function () {
     const title = lesson ? lesson.title : chapterTitle(c.bookId, c.num);
     inner += `
     <div class="chapter">
-      <h2 class="ch-title">${b.emoji} ${esc(b.name)} 第${c.num}章 · ${esc(title)} <span class="ch-date">${comp.date || ''}</span></h2>
+      <h2 class="ch-title">${b.emoji} ${esc(b.name)} 第${c.num}章 · ${esc(title)} <span class="ch-date">${comp.date || ''}</span>
+        <a class="ch-open" href="platform.html#/chapter/${c.bookId}/${c.num}" target="_blank">📖 打开本章</a></h2>
       ${reportSections(c.bookId, c.num)}
       ${reportQuizSection(c.bookId, c.num)}
     </div>`;
@@ -1791,9 +1794,10 @@ function renderFootprints() {
     const b = getBook(parts[0]);
     const lesson = getLesson(parts[0], num);
     const title = lesson ? lesson.title : chapterTitle(parts[0], num);
-    return `<div class="foot-row"><span class="foot-emoji">${emoji[f.t] || '📌'}</span>
+    return `<a class="foot-row" href="#/chapter/${parts[0]}/${num}" title="点击打开这一章">
+      <span class="foot-emoji">${emoji[f.t] || '📌'}</span>
       <div class="foot-info"><b>${label[f.t] || f.t} · ${b ? esc(b.name) + ' 第' + num + '章' : esc(f.k)}</b><span>${esc(title)}</span></div>
-      <span class="foot-date">${f.d} ${f.tm || ''}</span></div>`;
+      <span class="foot-date">${f.d} ${f.tm || ''} →</span></a>`;
   }).join('');
   return `<div class="foot-list">${rows}</div><div class="foot-count">共 ${list.length} 条足迹 · 记录自动保存在本机</div>`;
 }
