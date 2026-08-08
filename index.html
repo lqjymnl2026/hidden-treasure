@@ -129,7 +129,12 @@
     <button class="music-fab" id="bgMusicBtn" onclick="toggleBgMusic()" title="背景轻音乐">🎵</button>
     <script>
     function toggleBgMusic(){var a=document.getElementById('bgMusic'),b=document.getElementById('bgMusicBtn');if(!a)return;if(a.paused){a.volume=.45;a.play().then(function(){b.classList.add('on');try{localStorage.setItem('yiqi-music','on');}catch(e){}}).catch(function(){alert('无法播放音乐');});}else{a.pause();b.classList.remove('on');try{localStorage.setItem('yiqi-music','off');}catch(e){}}}
-    (function(){var a=document.getElementById('bgMusic'),b=document.getElementById('bgMusicBtn');if(!a||!b)return;try{if(localStorage.getItem('yiqi-music')==='on'){a.volume=.45;a.play().catch(function(){});b.classList.add('on');}}catch(e){}})();
+    (function(){var a=document.getElementById('bgMusic'),b=document.getElementById('bgMusicBtn');if(!a||!b)return;var want=true;try{var v=localStorage.getItem('yiqi-music');want=v?v==='on':true;}catch(e){}
+    if(!want)return;a.volume=.45;
+    function tp(){a.play().then(function(){b.classList.add('on');try{localStorage.setItem('yiqi-music','on');}catch(e){}}).catch(function(){});}
+    tp();
+    ['pointerdown','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,function h(){tp();document.removeEventListener(ev,h);});});
+    })();
     </script>
   </body>
 </html>

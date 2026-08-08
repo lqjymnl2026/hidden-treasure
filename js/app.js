@@ -1269,6 +1269,20 @@ function renderFooter() {
   </footer>`;
 }
 
+/* ---------- 手机端汉堡菜单 ---------- */
+window.toggleNav = function () {
+  const l = document.querySelector('.nav-links');
+  if (l) l.classList.toggle('open');
+};
+if (document.addEventListener) {
+  document.addEventListener('click', function (e) {
+    const l = document.querySelector('.nav-links');
+    if (!l || !l.classList.contains('open')) return;
+    if (!e.target.closest('.nav-links') && !e.target.closest('.nav-toggle')) l.classList.remove('open');
+    else if (e.target.closest('.nav-links a')) l.classList.remove('open');
+  });
+}
+
 /* ---------- 背景轻音乐 ---------- */
 window.toggleBgMusic = function () {
   const a = document.getElementById('bgMusic');
@@ -1292,13 +1306,23 @@ function initBgMusic() {
   const a = document.getElementById('bgMusic');
   const btn = document.getElementById('bgMusicBtn');
   if (!a || !btn) return;
-  try {
-    if (localStorage.getItem('yiqi-music') === 'on') {
-      a.volume = 0.45;
-      a.play().catch(() => {});
-      btn.classList.add('on');
-    }
-  } catch (e) {}
+  let want = true;
+  try { const v = localStorage.getItem('yiqi-music'); want = v ? v === 'on' : true; } catch (e) {}
+  if (!want) return;
+  a.volume = 0.45;
+  const tryPlay = () => {
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {});
+    btn.classList.add('on');
+    try { localStorage.setItem('yiqi-music', 'on'); } catch (e) {}
+  };
+  tryPlay();
+  const unlock = (ev) => {
+    tryPlay();
+    document.removeEventListener(ev.type, unlock);
+    ['pointerdown', 'touchstart', 'keydown'].forEach(t => document.removeEventListener(t, unlock));
+  };
+  ['pointerdown', 'touchstart', 'keydown'].forEach(t => document.addEventListener(t, unlock));
 }
 
 /* ---------- 启动 ---------- */
