@@ -440,6 +440,8 @@ function renderChapter(app, bookId, num) {
         ${next ? `<a class="btn gold" href="#/chapter/${b.id}/${next}">继续下一章 →</a>` : `<a class="btn gold" href="#/book/${b.id}">返回本卷地图</a>`}
         <a class="btn ghost" href="#/progress">查看我的旅程</a>
         <button class="btn ghost" onclick="openReport('${b.id}', ${num})">📄 查经报告</button>
+        <button class="btn ghost" onclick="downloadChapterReport('${b.id}', ${num})">📥 一键导出保存</button>
+        <button class="btn ghost" onclick="downloadChapterReport('${b.id}', ${num})">📥 一键导出保存</button>
       </div>
     </div>` : ''}
   </div>`;
@@ -739,6 +741,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
         <button class="btn gold" onclick="completeChapter('${qKey}', ${lesson.minutes})">✅ 完成本章学习</button>
         <button class="btn ghost" onclick="navigate('book/${b.id}')">🗺️ 返回本卷地图</button>
         <button class="btn ghost" onclick="openReport('${b.id}', ${num})">📄 查经报告</button>
+        <button class="btn ghost" onclick="downloadChapterReport('${b.id}', ${num})">📥 一键导出保存</button>
       </div>
     </div>
   </section>`;
@@ -891,6 +894,7 @@ body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans C
 .sec .q{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.6;}
 .sec .a{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:18px;line-height:1.8;white-space:pre-wrap;}
 .sec .a.empty{color:#c0b9a8;}
+.sec .a.correct{color:#2f855a;font-weight:700;background:#eef7f0;border-color:#bfe3cb;}
 .foot{text-align:center;color:var(--muted);font-size:15px;margin-top:36px;padding-top:16px;border-top:1px solid var(--line);}
 @media print{.toolbar{display:none}body{background:#fff;padding:0}.sec .a{border:none;padding:0}.chapter{box-shadow:none;border:1px solid #ddd}}
 </style>
@@ -917,6 +921,14 @@ function dl(){
 </body>
 </html>`;
 }
+function reportQuizSection(bookId, num) {
+  const qs = chapterQuiz(bookId, num);
+  const best = store.quiz[chKey(bookId, num)] || 0;
+  return `<h2 class="note-h">🧠 本章知识问答挑战（最佳成绩 ${best} / ${qs.length}）</h2>` + qs.map((q, i) =>
+    `<div class="sec"><h2>${i + 1}. ${esc(q.q)}</h2>` +
+    q.options.map(o => `<div class="a${o.correct ? ' correct' : ''}">${o.correct ? '✅ ' : ''}${esc(o.text)}</div>`).join('') +
+    `</div>`).join('');
+}
 function buildChapterReportDoc(bookId, num) {
   const d = reportFields(bookId, num);
   const b = d.b;
@@ -937,10 +949,23 @@ function buildChapterReportDoc(bookId, num) {
     <div class="mi"><b>学习时间</b><span>${minutes}</span></div>
   </div>
   ${memory}
-  <h2 class="note-h">✍️ 我的查经笔记</h2>
-  ${reportSections(bookId, num)}`;
+  <h2 class="note-h">✍️ 我的心得与笔记（题目 / 完成内容）</h2>
+  ${reportSections(bookId, num)}
+  ${reportQuizSection(bookId, num)}`;
   return reportDoc(b.name + '第' + num + '章 · 查经报告', inner, '隐藏的珍宝-查经报告-' + b.name + '第' + num + '章.html');
 }
+window.downloadChapterReport = function (bookId, num) {
+  store.counters = store.counters || {}; store.counters.reports = (store.counters.reports || 0) + 1; saveStore();
+  const html = buildChapterReportDoc(bookId, num);
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const b = getBook(bookId);
+  a.download = '隐藏的珍宝-读经报告-' + (b ? b.name : bookId) + '第' + num + '章.html';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 900);
+  toast('📥 读经报告已导出保存（含题目/完成内容/心得/笔记）');
+};
 window.openReport = function (bookId, num) {
   store.counters = store.counters || {}; store.counters.reports = (store.counters.reports || 0) + 1; saveStore();
   const html = buildChapterReportDoc(bookId, num);
@@ -972,6 +997,7 @@ window.openFullReport = function () {
     <div class="chapter">
       <h2 class="ch-title">${b.emoji} ${esc(b.name)} 第${c.num}章 · ${esc(title)} <span class="ch-date">${comp.date || ''}</span></h2>
       ${reportSections(c.bookId, c.num)}
+      ${reportQuizSection(c.bookId, c.num)}
     </div>`;
   });
   const html = reportDoc('我的查经报告（全部）', inner, '隐藏的珍宝-我的查经报告-全部.html');
@@ -1497,15 +1523,15 @@ function chapterQuiz(bookId, num) {
   const themePool = (CHAPTER_THEMES[bookId] && CHAPTER_THEMES[bookId].length > 4)
     ? CHAPTER_THEMES[bookId].slice()
     : Object.values(CHAPTER_THEMES).flat();
-  const themeOpts = shuffle([correctTheme].concat(pickDistractors(correctTheme, themePool, 3)));
-  const authorOpts = shuffle([b.author].concat(pickDistractors(b.author, BOOKS.map(x => x.author), 3)));
+  const mk = (correct, distractors) => shuffle([{ text: correct, correct: true }].concat(distractors.map(tx => ({ text: tx, correct: false }))));
+  const themeOpts = mk(correctTheme, pickDistractors(correctTheme, themePool, 3));
+  const authorOpts = mk(b.author, pickDistractors(b.author, BOOKS.map(x => x.author), 3));
   const catStr = t.name + ' · ' + b.category;
   const catPool = TESTAMENTS.flatMap(tt => tt.categories.map(c => tt.name + ' · ' + c));
-  const catOpts = shuffle([catStr].concat(pickDistractors(catStr, catPool, 3)));
+  const catOpts = mk(catStr, pickDistractors(catStr, catPool, 3));
   const ratio = num / b.chapters;
   const pos = ratio <= 0.34 ? '前三分之一' : (ratio <= 0.67 ? '中间三分之一' : '后三分之一');
-  const posPool = ['前三分之一', '中间三分之一', '后三分之一'];
-  const posOpts = shuffle([pos].concat(pickDistractors(pos, posPool, 2)));
+  const posOpts = mk(pos, pickDistractors(pos, ['前三分之一', '中间三分之一', '后三分之一'], 2));
   return [
     { q: `${b.name} 第${num}章的主题是什么？`, options: themeOpts },
     { q: `这卷书（${b.name}）的作者是谁？`, options: authorOpts },
@@ -1513,6 +1539,7 @@ function chapterQuiz(bookId, num) {
     { q: `第${num}章位于《${b.name}》（共${b.chapters}章）的哪个位置？`, options: posOpts }
   ];
 }
+const quizRun = {};
 function quizSection(qKey) {
   return `
   <!-- ⑨ 本章知识问答挑战 -->
@@ -1532,13 +1559,14 @@ window.startChapterQuiz = function (key) {
   if (!wrap) return;
   const parts = key.split('.');
   const qs = chapterQuiz(parts[0], parseInt(parts[1], 10));
+  quizRun[key] = 0;
   const best = store.quiz[key] || 0;
   let html = `<div class="quiz-best">🏆 历史最佳：${best} / ${qs.length}</div>`;
   qs.forEach((q, qi) => {
     html += `<div class="quiz-q" data-qn="${qi}">
       <div class="step-question">${qi + 1}. ${esc(q.q)}</div>
       <div class="options">` +
-      q.options.map(o => `<button class="option" data-quiz="${key}" data-qn="${qi}" data-correct="${o === q.options[0] ? 'false' : ''}" onclick="quizAnswer(this,'${key}')"><span class="o-key">${'ABCD'[q.options.indexOf(o)]}</span>${esc(o)}</button>`).join('') +
+      q.options.map((o, oi) => `<button class="option" data-quiz="${key}" data-qn="${qi}" data-correct="${o.correct}" onclick="quizAnswer(this,'${key}')"><span class="o-key">${'ABCD'[oi]}</span>${esc(o.text)}</button>`).join('') +
       `</div></div>`;
   });
   wrap.innerHTML = html;
@@ -1550,8 +1578,7 @@ window.quizAnswer = function (el, key) {
   group.forEach(o => o.disabled = true);
   if (correct) {
     el.classList.add('correct');
-    store.quiz[key] = (store.quiz[key] || 0) + 1;
-    saveStore();
+    quizRun[key] = (quizRun[key] || 0) + 1;
     toast('🎉 答对了！');
   } else {
     el.classList.add('wrong');
@@ -1562,7 +1589,8 @@ window.quizAnswer = function (el, key) {
     const answered = wrap.querySelectorAll('.option[data-quiz="' + key + '"]:disabled').length;
     const total = wrap.querySelectorAll('.option[data-quiz="' + key + '"]').length;
     if (answered >= total) {
-      const score = store.quiz[key] || 0;
+      const score = quizRun[key] || 0;
+      if (score > (store.quiz[key] || 0)) { store.quiz[key] = score; saveStore(); }
       const qCount = wrap.querySelectorAll('.quiz-q').length;
       wrap.insertAdjacentHTML('beforeend', `<div class="quiz-result">
         <div class="qr-emoji">${score === qCount ? '🌟' : (score >= qCount / 2 ? '👍' : '💪')}</div>
