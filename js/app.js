@@ -696,7 +696,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
         <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
       </div>
       <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
-      <button class="btn ghost sm" onclick="speakVerse('${qKey}')">🔊 朗读</button>
+      <button class="btn ghost sm" onclick="speakChapter('${qKey}')">🔊 朗读全文</button>
       <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 读经是查经的基础。接下来我们一起来观察这段经文。</div>
     </div>
   </section>
@@ -802,7 +802,7 @@ function renderGenericSteps(b, num, title, note, done) {
         <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
       </div>
       <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
-      <button class="btn ghost sm" onclick="speakVerse('${qKey}')">🔊 朗读</button>
+      <button class="btn ghost sm" onclick="speakChapter('${qKey}')">🔊 朗读全文</button>
       <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 很好！读完之后，试着用自己的话总结这一章。</div>
     </div>
   </section>
@@ -1002,10 +1002,9 @@ window.openReport = function (bookId, num) {
   store.counters = store.counters || {}; store.counters.reports = (store.counters.reports || 0) + 1; saveStore();
   recordActivity('report', bookId + '.' + num, 10);
   const html = buildChapterReportDoc(bookId, num);
-  const w = window.open('', '_blank');
-  if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口后重试'); return; }
-  w.document.write(html);
-  w.document.close();
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const w = window.open(url, '_blank');
+  if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口，或使用「一键导出保存」'); }
 };
 window.openFullReport = function () {
   const chapters = [];
@@ -1034,10 +1033,9 @@ window.openFullReport = function () {
     </div>`;
   });
   const html = reportDoc('我的查经报告（全部）', inner, '隐藏的珍宝-我的查经报告-全部.html');
-  const w = window.open('', '_blank');
-  if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口后重试'); return; }
-  w.document.write(html);
-  w.document.close();
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const w = window.open(url, '_blank');
+  if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口，或使用「一键导出保存」'); }
 };
 
 /* ---------- 章节交互函数（挂到 window） ---------- */
@@ -1448,6 +1446,7 @@ window.shareVerseCard = function () {
 };
 window.speakVerse = function (key) {
   if (!window.speechSynthesis) { toast('⚠️ 当前浏览器不支持朗读'); return; }
+  if (speechSynthesis.speaking) { speechSynthesis.cancel(); toast('⏹ 已停止朗读'); return; }
   let text = '';
   if (key === 'daily') { const v = dailyVerse(); text = v.ref + '。' + v.text; }
   else {
@@ -1460,6 +1459,25 @@ window.speakVerse = function (key) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'zh-CN'; u.rate = 0.95;
   speechSynthesis.speak(u);
+};
+window.speakChapter = async function (key) {
+  if (!window.speechSynthesis) { toast('⚠️ 当前浏览器不支持语音朗读'); return; }
+  if (speechSynthesis.speaking) { speechSynthesis.cancel(); toast('⏹ 已停止朗读'); return; }
+  let raw = bibleTextRaw[key] || cachedRaw(key);
+  if (!raw) {
+    toast('⏳ 正在加载经文，稍后自动朗读…');
+    await loadChapterText(key);
+    raw = bibleTextRaw[key] || cachedRaw(key);
+  }
+  if (!raw) { toast('⚠️ 经文加载失败，暂时无法朗读'); return; }
+  const parts = String(key).split('.');
+  const b = getBook(parts[0]);
+  const head = (b ? b.name + '，第' + parts[1] + '章。' : '');
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(head + raw);
+  u.lang = 'zh-CN'; u.rate = 0.9;
+  speechSynthesis.speak(u);
+  toast('🔊 正在朗读本章全文…');
 };
 function badgeCheck() {
   const c = store.counters || {};
@@ -1679,6 +1697,8 @@ window.submitQuiz = function (key) {
 
 /* ---------- 阅读经文（在线和合本简体） ---------- */
 const BIBLE_TEXT_CACHE = 'yiqi-bibletext-cache-v1';
+const BIBLE_TEXT_RAW = 'yiqi-bibletext-raw-v1';
+const bibleTextRaw = {};
 function cachedChapter(key) {
   try { const c = JSON.parse(localStorage.getItem(BIBLE_TEXT_CACHE) || '{}'); return c[key] ? c[key].t : null; } catch (e) { return null; }
 }
@@ -1689,6 +1709,18 @@ function cacheChapter(key, html) {
     const ks = Object.keys(c);
     if (ks.length > 25) { ks.sort((x, y) => c[x].ts - c[y].ts); delete c[ks[0]]; }
     localStorage.setItem(BIBLE_TEXT_CACHE, JSON.stringify(c));
+  } catch (e) {}
+}
+function cachedRaw(key) {
+  try { const c = JSON.parse(localStorage.getItem(BIBLE_TEXT_RAW) || '{}'); return c[key] || null; } catch (e) { return null; }
+}
+function cacheRaw(key, text) {
+  try {
+    const c = JSON.parse(localStorage.getItem(BIBLE_TEXT_RAW) || '{}');
+    c[key] = text;
+    const ks = Object.keys(c);
+    if (ks.length > 25) delete c[ks[0]];
+    localStorage.setItem(BIBLE_TEXT_RAW, JSON.stringify(c));
   } catch (e) {}
 }
 async function loadChapterText(key) {
@@ -1707,8 +1739,11 @@ async function loadChapterText(key) {
     const clean = (s) => String(s || '').replace(/\ufeff/g, '').replace(/\u3000/g, ' ').trim();
     const html = '<div class="bt-ref">📖 ' + esc(clean(data.name)) + '（和合本·简体）</div>' +
       data.verses.map(v => '<p><sup>' + v.verse + '</sup>' + esc(clean(v.text)) + '</p>').join('');
+    const rawText = data.verses.map(v => clean(v.text)).join('。').replace(/。$/,'') + '。';
+    bibleTextRaw[key] = rawText;
     box.innerHTML = html;
     cacheChapter(key, html);
+    cacheRaw(key, rawText);
   } catch (e) {
     const b = getBook(bookId);
     const link = 'https://www.biblegateway.com/passage/?search=' + encodeURIComponent((b ? b.en : bookId) + ' ' + num) + '&version=CUVS';
