@@ -21,6 +21,8 @@ body{
   color:var(--ink);min-height:100vh;padding:12px 10px 60px;-webkit-tap-highlight-color:transparent;
 }
 .wrap{max-width:100%;margin:0 auto;padding:0 12px;}
+.home-btn{display:inline-block;background:rgba(255,255,255,.95);border:3px solid var(--line);border-radius:14px;color:var(--blue-d);font-weight:900;font-size:clamp(14px,2.4vw,18px);padding:8px 22px;text-decoration:none;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,72,192,.12);}
+.home-btn:hover{border-color:var(--blue);transform:translateY(-2px);}
 .top{text-align:center;padding:20px 0 8px;}
 .title{font-size:clamp(30px,6vw,64px);font-weight:900;color:var(--blue-d);
   text-shadow:0 2px 0 #fff,0 6px 16px rgba(0,72,192,.22);}
@@ -130,6 +132,7 @@ html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
 <div class="wrap">
   <section id="dir">
     <div class="top">
+      <a class="home-btn" href="index.html">🏠 返回主页</a>
       <div class="title">📖 整本圣经知识问答闯关</div>
       <div class="sub">66 卷 · 每卷 50 题 · 内容丰富＋金句填空 · 手机／电脑均可使用</div>
       <div class="stats">

@@ -427,6 +427,7 @@ function renderChapter(app, bookId, num) {
       <div class="cc-btns">
         ${next ? `<a class="btn gold" href="#/chapter/${b.id}/${next}">继续下一章 →</a>` : `<a class="btn gold" href="#/book/${b.id}">返回本卷地图</a>`}
         <a class="btn ghost" href="#/progress">查看我的旅程</a>
+        <button class="btn ghost" onclick="openReport('${b.id}', ${num})">📄 查经报告</button>
       </div>
     </div>` : ''}
   </div>`;
@@ -537,6 +538,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
       <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
         <button class="btn gold" onclick="completeChapter('${qKey}', ${lesson.minutes})">✅ 完成本章学习</button>
         <button class="btn ghost" onclick="navigate('book/${b.id}')">🗺️ 返回本卷地图</button>
+        <button class="btn ghost" onclick="openReport('${b.id}', ${num})">📄 查经报告</button>
       </div>
     </div>
   </section>`;
@@ -618,15 +620,172 @@ function renderGenericSteps(b, num, title, note, done) {
       <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
         <button class="btn gold" onclick="completeChapter('${qKey}', 10)">✅ 完成本章学习</button>
         <button class="btn ghost" onclick="navigate('book/${b.id}')">🗺️ 返回本卷地图</button>
+        <button class="btn ghost" onclick="openReport('${b.id}', ${num})">📄 查经报告</button>
       </div>
     </div>
   </section>`;
 }
 
+/* ---------- 查经报告 ---------- */
+function reportFields(bookId, num) {
+  const b = getBook(bookId);
+  const lesson = getLesson(bookId, num);
+  const title = lesson ? lesson.title : chapterTitle(bookId, num);
+  const note = store.notes[chKey(bookId, num)] || {};
+  const fields = [];
+  const push = (label, q, a) => fields.push({ label, q, a: (a || '').trim() });
+  if (lesson) {
+    push('① 开场问题', lesson.opening.question, note.opening);
+    push('② 经文观察', lesson.observation.question, note.observation);
+    push('③ 发现圣经', lesson.discovery.question, note.discovery);
+    push('④ 一起讨论', lesson.discussion.prompt, note.discussion);
+    push('⑤ 今天应用', lesson.application.prompt, note.application);
+  } else {
+    push('① 开场问题', '读' + b.name + ' ' + num + '章之前，我对「' + title + '」的想法', note.opening);
+    push('② 经文观察', '这一章主要讲了什么？有哪些关键词或重复出现的词？', note.observation);
+    push('③ 发现圣经', '这一章让我更多认识神（或认识人）什么？', note.discovery);
+    push('④ 一起讨论', '最触动我的一句话是什么？它和我现在的处境有什么关系？', note.discussion);
+    push('⑤ 今天应用', '基于这一章，今天我可以做什么具体行动？', note.application);
+  }
+  return { b, num, title, lesson, fields };
+}
+function reportSections(bookId, num) {
+  const d = reportFields(bookId, num);
+  return d.fields.map(f => {
+    const a = f.a ? esc(f.a) : '';
+    return `<div class="sec"><h2>${f.label}</h2><p class="q">${esc(f.q)}</p><div class="a${a ? '' : ' empty'}">${a || '（未填写）'}</div></div>`;
+  }).join('');
+}
+function reportDoc(title, inner, filename) {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(title)}</title>
+<style>
+:root{--gold:#c9a24b;--ink:#2b2b2b;--muted:#8a8578;--line:#e8e2d5;--paper:#fffdf8;--blue:#3b4a7a;}
+*{box-sizing:border-box;}
+body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;color:var(--ink);background:var(--paper);margin:0;padding:0 16px 56px;}
+.toolbar{position:sticky;top:0;z-index:20;background:rgba(255,253,248,.96);border-bottom:1px solid var(--line);padding:12px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.t-title{font-weight:800;color:#7a5b1e;margin-right:auto;font-size:14px;}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;}
+.btn.gold{background:linear-gradient(135deg,#c9a24b,#b38736);color:#fff;}
+.btn.ghost{background:#fff;border:1.5px solid #c9a24b;color:#7a5b1e;}
+.report{max-width:720px;margin:0 auto;}
+.report-head{text-align:center;padding:36px 0 6px;}
+.report-head .logo{font-size:40px;}
+.report-head h1{font-size:26px;margin:8px 0 4px;color:#1f2430;}
+.report-head .sub{color:var(--muted);font-size:14px;font-weight:600;}
+.meta-box{background:#f7f1e2;border:1px solid #ece0c2;border-radius:14px;padding:18px 20px;margin:20px 0;display:flex;flex-wrap:wrap;gap:8px 30px;}
+.mi b{display:block;font-size:12px;color:var(--muted);font-weight:600;}
+.mi span{font-size:15px;font-weight:700;}
+.memory{background:#eef3fb;border-left:5px solid var(--blue);border-radius:10px;padding:14px 18px;font-style:italic;font-family:"Songti SC","STSong",serif;font-size:15px;color:#2c3860;margin:0 0 26px;}
+.note-h{font-size:18px;color:#7a5b1e;margin:0 0 16px;}
+.chapter{background:#fbf7ee;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px;page-break-inside:avoid;}
+.ch-title{font-size:17px;color:#2c3860;border-bottom:2px solid var(--line);padding-bottom:8px;margin:0 0 14px;}
+.ch-date{font-size:12px;color:var(--muted);font-weight:400;}
+.sec{margin-bottom:20px;}
+.sec h2{font-size:14px;color:#7a5b1e;margin:0 0 4px;}
+.sec .q{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.6;}
+.sec .a{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;line-height:1.8;white-space:pre-wrap;}
+.sec .a.empty{color:#c0b9a8;}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:36px;padding-top:16px;border-top:1px solid var(--line);}
+@media print{.toolbar{display:none}body{background:#fff;padding:0}.sec .a{border:none;padding:0}.chapter{box-shadow:none;border:1px solid #ddd}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="t-title">💎 隐藏的珍宝 · 查经报告</span>
+  <button class="btn gold" onclick="window.print()">🖨️ 打印 / 存为PDF</button>
+  <button class="btn ghost" onclick="dl()">⬇️ 下载HTML</button>
+</div>
+<div class="report">${inner}
+  <div class="foot">由「隐藏的珍宝｜66卷圣经互动学习平台」生成 · 愿查经的收获成为你的属灵珍宝 💎</div>
+</div>
+<script>
+function dl(){
+  var h='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  var b=new Blob([h],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=${JSON.stringify(filename)};
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+}
+<\/script>
+</body>
+</html>`;
+}
+function buildChapterReportDoc(bookId, num) {
+  const d = reportFields(bookId, num);
+  const b = d.b;
+  const comp = store.completed[chKey(bookId, num)] || {};
+  const date = comp.date || '—';
+  const minutes = comp.minutes ? comp.minutes + ' 分钟' : '—';
+  const memory = d.lesson ? `<div class="memory">📜 记忆经文：${esc(d.lesson.memoryVerse)}</div>` : '';
+  const inner = `
+  <div class="report-head">
+    <div class="logo">💎</div>
+    <h1>查经报告</h1>
+    <div class="sub">${b.emoji} ${esc(b.name)} 第${num}章 · ${esc(d.title)}</div>
+  </div>
+  <div class="meta-box">
+    <div class="mi"><b>书卷</b><span>${b.emoji} ${esc(b.name)}</span></div>
+    <div class="mi"><b>章节</b><span>第${num}章 · ${esc(d.title)}</span></div>
+    <div class="mi"><b>学习日期</b><span>${date}</span></div>
+    <div class="mi"><b>学习时间</b><span>${minutes}</span></div>
+  </div>
+  ${memory}
+  <h2 class="note-h">✍️ 我的查经笔记</h2>
+  ${reportSections(bookId, num)}`;
+  return reportDoc(b.name + '第' + num + '章 · 查经报告', inner, '隐藏的珍宝-查经报告-' + b.name + '第' + num + '章.html');
+}
+window.openReport = function (bookId, num) {
+  const html = buildChapterReportDoc(bookId, num);
+  const w = window.open('', '_blank');
+  if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口后重试'); return; }
+  w.document.write(html);
+  w.document.close();
+};
+window.openFullReport = function () {
+  const chapters = [];
+  BOOKS.forEach(b => {
+    for (let i = 1; i <= b.chapters; i++) {
+      if (store.completed[chKey(b.id, i)]) chapters.push({ bookId: b.id, num: i });
+    }
+  });
+  if (!chapters.length) { toast('还没有完成任何章节，先去查经吧 😊'); return; }
+  let inner = `
+  <div class="report-head">
+    <div class="logo">📚</div>
+    <h1>我的查经报告 · 全部</h1>
+    <div class="sub">共 ${chapters.length} 章 · 隐藏的珍宝 · 66卷圣经互动学习平台</div>
+  </div>`;
+  chapters.forEach(c => {
+    const b = getBook(c.bookId);
+    const comp = store.completed[chKey(c.bookId, c.num)] || {};
+    const lesson = getLesson(c.bookId, c.num);
+    const title = lesson ? lesson.title : chapterTitle(c.bookId, c.num);
+    inner += `
+    <div class="chapter">
+      <h2 class="ch-title">${b.emoji} ${esc(b.name)} 第${c.num}章 · ${esc(title)} <span class="ch-date">${comp.date || ''}</span></h2>
+      ${reportSections(c.bookId, c.num)}
+    </div>`;
+  });
+  const html = reportDoc('我的查经报告（全部）', inner, '隐藏的珍宝-我的查经报告-全部.html');
+  const w = window.open('', '_blank');
+  if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口后重试'); return; }
+  w.document.write(html);
+  w.document.close();
+};
+
 /* ---------- 章节交互函数（挂到 window） ---------- */
 window.pickOpening = function (el, key) {
   document.querySelectorAll(`.option[data-q="opening"]`).forEach(o => o.disabled = true);
   el.classList.add('correct');
+  store.notes[key] = store.notes[key] || {};
+  store.notes[key].opening = (el.textContent || '').trim();
+  saveStore();
   const fb = document.getElementById('fb-opening-' + key);
   if (fb) fb.classList.add('show');
 };
@@ -817,6 +976,7 @@ function renderProgress(app) {
           <a class="btn gold sm" href="#/start">🟢 从头开始（创世记 → 启示录）</a>
           <a class="btn ghost sm" href="#/books">🔵 选择任意一卷</a>
           <a class="btn ghost sm" href="#/themes">🟠 从主题进入</a>
+          <button class="btn gold sm" onclick="openFullReport()">📄 我的查经报告（全部）</button>
         </div>
       </div>
       <div class="jm-section" style="margin-top:34px">
