@@ -8,7 +8,9 @@ const STORE_KEY = 'yiqi-bible-progress-v1';
 const store = {
   completed: {},   // 'genesis.1' -> { date: 'YYYY-MM-DD', minutes: 10 }
   notes: {},       // 'genesis.1' -> { discussion: '...', application: '...' }
-  minutes: 0
+  minutes: 0,
+  counters: {},     // { recordings: n, reports: n }
+  quiz: {}          // 'book.ch' -> 最佳挑战得分
 };
 function loadStore() {
   try {
@@ -156,6 +158,10 @@ function renderHome(app) {
     </div>
   </header>
   <div class="container">
+
+    <div class="section">
+      ${renderDailyTreasure()}
+    </div>
 
     <div class="section">
       <div class="section-head">
@@ -418,9 +424,12 @@ function renderChapter(app, bookId, num) {
 
     ${renderChapterJump(b.id, num)}
 
+    ${explainSection(b.id, num)}
+
     <div class="steps">
       ${lesson ? renderCuratedSteps(b, num, lesson, note, done) : renderGenericSteps(b, num, title, note, done)}
       ${recorderSection(chKey(b.id, num))}
+      ${quizSection(chKey(b.id, num))}
     </div>
 
     ${done ? `<div class="complete-card" style="margin-top:30px">
@@ -544,6 +553,7 @@ window.startRecord = async function (key) {
       const blob = new Blob(recChunks[key], { type: mime || 'audio/webm' });
       const dur = recSecs[key] || 0;
       try { await recSave(key, blob, dur); } catch (e) {}
+      store.counters = store.counters || {}; store.counters.recordings = (store.counters.recordings || 0) + 1; saveStore();
       recBlobs[key] = blob;
       if (recTimers[key]) { clearInterval(recTimers[key]); recTimers[key] = null; }
       recStopStream(key);
@@ -650,6 +660,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
         <p class="pb-note">💡 请打开你手边的圣经（或在线圣经）通读本章。读到触动你的句子时，停下来默想一下。</p>
       </div>
       <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
+      <button class="btn ghost sm" onclick="speakVerse('${qKey}')">🔊 朗读</button>
       <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 读经是查经的基础。接下来我们一起来观察这段经文。</div>
     </div>
   </section>
@@ -753,6 +764,7 @@ function renderGenericSteps(b, num, title, note, done) {
         <p class="pb-note">💡 请打开你手边的圣经（或在线圣经）通读本章。留意：谁？在哪里？发生什么？神说了什么？</p>
       </div>
       <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
+      <button class="btn ghost sm" onclick="speakVerse('${qKey}')">🔊 朗读</button>
       <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 很好！读完之后，试着用自己的话总结这一章。</div>
     </div>
   </section>
@@ -926,6 +938,7 @@ function buildChapterReportDoc(bookId, num) {
   return reportDoc(b.name + '第' + num + '章 · 查经报告', inner, '隐藏的珍宝-查经报告-' + b.name + '第' + num + '章.html');
 }
 window.openReport = function (bookId, num) {
+  store.counters = store.counters || {}; store.counters.reports = (store.counters.reports || 0) + 1; saveStore();
   const html = buildChapterReportDoc(bookId, num);
   const w = window.open('', '_blank');
   if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口后重试'); return; }
@@ -1153,6 +1166,18 @@ function renderProgress(app) {
       <div class="card stat-card"><div class="sc-emoji">⏱</div><b>${fmtMinutes(totalMinutes())}</b><span>累计学习时间</span></div>
       <div class="card stat-card"><div class="sc-emoji">🔥</div><b>${streakDays()}</b><span>连续学习 / 天</span></div>
     </div>
+    <div class="section">
+      <div class="section-head"><h2>💎 今日珍宝</h2><span class="sub">每天一节经文，默想后可生成分享卡</span></div>
+      ${renderDailyTreasure()}
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>🏅 我的徽章</h2><span class="sub">坚持查经，解锁属灵珍宝徽章</span></div>
+      ${renderBadges()}
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>🗓️ 灵修打卡日历</h2><span class="sub">近 180 天学习记录</span></div>
+      <div class="card" style="padding:22px">${renderStudyCalendar()}</div>
+    </div>
     <div class="journey-map">
       <div class="section-head"><h2>📈 整体进度</h2><span class="sub">${done} / 1189 章 · ${pct.toFixed(1)}%</span></div>
       <div class="card" style="padding:24px">
@@ -1282,6 +1307,263 @@ if (document.addEventListener) {
     else if (e.target.closest('.nav-links a')) l.classList.remove('open');
   });
 }
+
+/* ---------- 创意功能：每日珍宝 / 随机查经 / 徽章 / 日历 / 朗读 / 经文讲解 / 章节问答 ---------- */
+function renderDailyTreasure() {
+  const v = dailyVerse();
+  const d = todayStr();
+  return `<div class="card treasure-card">
+    <div class="tc-head"><span class="tc-badge">💎 每日珍宝</span><span class="tc-date">${d}</span></div>
+    <div class="tc-verse">"${esc(v.text)}"</div>
+    <div class="tc-ref">—— ${esc(v.ref)}</div>
+    <div class="tc-actions">
+      <button class="btn gold sm" onclick="shareVerseCard()">🖼️ 生成经文分享卡</button>
+      <button class="btn ghost sm" onclick="randomChapter()">🎲 随机查经</button>
+      <button class="btn ghost sm" onclick="speakVerse('daily')">🔊 朗读</button>
+    </div>
+  </div>`;
+}
+window.randomChapter = function () {
+  const b = BOOKS[Math.floor(Math.random() * BOOKS.length)];
+  const n = Math.floor(Math.random() * b.chapters) + 1;
+  navigate('chapter/' + b.id + '/' + n);
+};
+function wrapText(ctx, text, x, y, maxW, lineH) {
+  const chars = String(text).split('');
+  let line = '', lines = [];
+  for (const ch of chars) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = ch; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * lineH));
+  return lines.length;
+}
+window.shareVerseCard = function () {
+  const v = dailyVerse();
+  const c = document.createElement('canvas');
+  c.width = 1080; c.height = 1350;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 1350);
+  g.addColorStop(0, '#1a1a2e'); g.addColorStop(0.5, '#16213e'); g.addColorStop(1, '#0f3460');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1080, 1350);
+  ctx.fillStyle = 'rgba(255,215,0,0.07)';
+  ctx.beginPath(); ctx.arc(540, 320, 250, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(150, 1150, 180, 0, Math.PI * 2); ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8c873'; ctx.font = 'bold 60px "PingFang SC","Heiti SC",sans-serif';
+  ctx.fillText('隐藏的珍宝 · 每日珍宝', 540, 170);
+  ctx.font = '150px sans-serif';
+  ctx.fillText('💎', 540, 400);
+  ctx.fillStyle = '#ffffff'; ctx.font = '50px "PingFang SC","Heiti SC",sans-serif';
+  const lines = wrapText(ctx, '"' + v.text + '"', 540, 620, 800, 76);
+  ctx.fillStyle = 'rgba(232,200,115,0.95)'; ctx.font = '42px "PingFang SC","Heiti SC",sans-serif';
+  ctx.fillText('—— ' + v.ref, 540, 690 + lines * 76);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '32px "PingFang SC",sans-serif';
+  ctx.fillText('隐藏的珍宝 · 66卷圣经互动学习平台 · ' + todayStr(), 540, 1280);
+  const url = c.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url; a.download = '隐藏的珍宝-每日珍宝-' + todayStr() + '.png';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); }, 800);
+  toast('🖼️ 经文分享卡已生成，请在「下载」中查看');
+};
+window.speakVerse = function (key) {
+  if (!window.speechSynthesis) { toast('⚠️ 当前浏览器不支持朗读'); return; }
+  let text = '';
+  if (key === 'daily') { const v = dailyVerse(); text = v.ref + '。' + v.text; }
+  else {
+    const parts = String(key).split('.');
+    const b = getBook(parts[0]);
+    const lesson = getLesson(parts[0], parseInt(parts[1], 10));
+    text = lesson && lesson.memoryVerse ? lesson.memoryVerse : ((b ? b.name : '') + ' 第' + parts[1] + '章');
+  }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN'; u.rate = 0.95;
+  speechSynthesis.speak(u);
+};
+function badgeCheck() {
+  const c = store.counters || {};
+  const booksDone = () => BOOKS.filter(b => bookProgress(b.id) >= 1).length;
+  const allOt = BOOKS.filter(b => b.testament === 'ot').every(b => bookProgress(b.id) >= 1);
+  const allNt = BOOKS.filter(b => b.testament === 'nt').every(b => bookProgress(b.id) >= 1);
+  return [
+    { id: 'first', emoji: '🌱', name: '初尝主恩', desc: '完成第1章查经', got: chaptersDone() >= 1 },
+    { id: 'seven', emoji: '🔥', name: '七日之旅', desc: '完成7章查经', got: chaptersDone() >= 7 },
+    { id: 'book1', emoji: '📖', name: '一卷在手', desc: '完成任意1整卷', got: booksDone() >= 1 },
+    { id: 'book5', emoji: '📚', name: '五卷同游', desc: '完成5整卷', got: booksDone() >= 5 },
+    { id: 'streak3', emoji: '☕', name: '三天之火', desc: '连续学习3天', got: streakDays() >= 3 },
+    { id: 'streak7', emoji: '🌿', name: '一周持守', desc: '连续学习7天', got: streakDays() >= 7 },
+    { id: 'streak30', emoji: '🌙', name: '月月精进', desc: '连续学习30天', got: streakDays() >= 30 },
+    { id: 'rec', emoji: '🎙️', name: '向神倾心', desc: '录制第一段祷告录音', got: (c.recordings || 0) >= 1 },
+    { id: 'report', emoji: '📄', name: '珍宝存档', desc: '生成第一份查经报告', got: (c.reports || 0) >= 1 },
+    { id: 'ot', emoji: '⛰️', name: '旧约行者', desc: '完成旧约39卷', got: allOt },
+    { id: 'nt', emoji: '✝️', name: '新约行者', desc: '完成新约27卷', got: allNt },
+    { id: 'all66', emoji: '👑', name: '集齐珍宝', desc: '完成全部66卷', got: booksDone() >= 66 }
+  ];
+}
+function renderBadges() {
+  const list = badgeCheck();
+  const got = list.filter(x => x.got).length;
+  return `<div class="badge-wrap"><div class="badge-count">🏅 已解锁 ${got} / ${list.length} 枚徽章</div><div class="badge-grid">
+    ${list.map(x => `<div class="badge ${x.got ? 'got' : 'lock'}"><div class="bd-emoji">${x.got ? x.emoji : '🔒'}</div><b>${x.name}</b><span>${x.desc}</span></div>`).join('')}
+  </div></div>`;
+}
+function renderStudyCalendar() {
+  const days = {};
+  Object.values(store.completed).forEach(c => { if (c.date) days[c.date] = (days[c.date] || 0) + 1; });
+  const today = new Date();
+  const cells = [];
+  for (let i = 179; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const cnt = days[key] || 0;
+    const cls = cnt === 0 ? '' : (cnt >= 3 ? 'l3' : (cnt >= 2 ? 'l2' : 'l1'));
+    cells.push(`<span class="cal-cell ${cls}" title="${key}${cnt ? ' · 学习' + cnt + '次' : ''}"></span>`);
+  }
+  return `<div class="cal-grid">${cells.join('')}</div><div class="cal-legend"><span class="cal-cell"></span> 无 <span class="cal-cell l1"></span> 1次 <span class="cal-cell l2"></span> 2次 <span class="cal-cell l3"></span> 3次+</div>`;
+}
+function chapterExplain(bookId, num) {
+  const b = getBook(bookId);
+  const t = getTestament(b.testament);
+  const lesson = getLesson(bookId, num);
+  const title = lesson ? lesson.title : chapterTitle(bookId, num);
+  const ratio = num / b.chapters;
+  const pos = ratio <= 0.34 ? '前三分之一（全书开始部分）' : (ratio <= 0.67 ? '中间三分之一（全书展开部分）' : '后三分之一（全书收尾部分）');
+  const catHint = {
+    '律法书': '留意神与百姓所立的约、法则与应许，看见圣洁与恩典的平衡。',
+    '历史书': '留意神在历史中的作为：顺服带来祝福，悖逆带来管教。',
+    '诗歌智慧书': '用心灵去体会：祷告、赞美、哀叹与智慧，都是灵魂真实的声音。',
+    '大先知书': '留意审判与盼望并存的宣告，以及指向弥赛亚的预言。',
+    '小先知书': '留意神对公义、怜悯与悔改的呼唤，先知的话虽短却有力。',
+    '福音书': '观察耶稣的所言所行，思想祂是谁、祂来做什么。',
+    '保罗书信': '先明白福音的真理，再活出福音的生活，两者不可分割。',
+    '普通书信': '留意在患难与错谬中如何持守信心、彼此相爱、活出真道。',
+    '预言书': '留意末后的异象与盼望：基督得胜，新天新地必定来临。'
+  }[b.category] || '祷告求圣灵开启，慢慢读，留心观察。';
+  const app = lesson ? lesson.application.prompt : '读完本章，求神光照：哪一句话触动你？今天做一件具体的小事回应祂。';
+  return { b, t, num, title, pos, catHint, lesson, app };
+}
+function explainSection(bookId, num) {
+  const d = chapterExplain(bookId, num);
+  const b = d.b;
+  return `
+  <div class="card explain-card">
+    <div class="ex-head"><span class="ex-badge">📖 本章经文讲解</span><span class="ex-ref">${b.emoji} ${esc(b.name)} 第${num}章 · 共${b.chapters}章</span></div>
+    <div class="ex-grid">
+      <div class="ex-item"><b>本章主题</b><span>${esc(d.title)}</span></div>
+      <div class="ex-item"><b>本书分类</b><span>${d.t.name} · ${b.category}</span></div>
+      <div class="ex-item"><b>章节位置</b><span>${d.pos}</span></div>
+      <div class="ex-item"><b>作者</b><span>${esc(b.author)}</span></div>
+    </div>
+    <div class="ex-block"><b>📖 本书简介</b><p>${esc(b.summary)}</p></div>
+    <div class="ex-block"><b>🎯 本书核心主题</b><p>${esc(b.theme)}</p></div>
+    <div class="ex-block"><b>💡 阅读提示</b><p>${esc(d.catHint)} 阅读时问自己：这一章让我更多认识神什么？又让我看见当如何行？</p></div>
+    ${d.lesson && d.lesson.memoryVerse ? `<div class="ex-block gold"><b>📜 本章金句</b><p>${esc(d.lesson.memoryVerse)}</p></div>` : ''}
+    ${d.lesson && d.lesson.discovery && d.lesson.discovery.note ? `<div class="ex-block"><b>✨ 讲解要点</b><p>${esc(d.lesson.discovery.note)}</p></div>` : ''}
+    <div class="ex-block"><b>🛠️ 生活应用</b><p>${esc(d.app)}</p></div>
+  </div>`;
+}
+function pickDistractors(correct, pool, n) {
+  const arr = pool.filter(x => x !== correct);
+  const out = [];
+  while (out.length < n && arr.length) out.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]);
+  return out;
+}
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function chapterQuiz(bookId, num) {
+  const b = getBook(bookId);
+  const t = getTestament(b.testament);
+  const correctTheme = chapterTitle(bookId, num);
+  const themePool = (CHAPTER_THEMES[bookId] && CHAPTER_THEMES[bookId].length > 4)
+    ? CHAPTER_THEMES[bookId].slice()
+    : Object.values(CHAPTER_THEMES).flat();
+  const themeOpts = shuffle([correctTheme].concat(pickDistractors(correctTheme, themePool, 3)));
+  const authorOpts = shuffle([b.author].concat(pickDistractors(b.author, BOOKS.map(x => x.author), 3)));
+  const catStr = t.name + ' · ' + b.category;
+  const catPool = TESTAMENTS.flatMap(tt => tt.categories.map(c => tt.name + ' · ' + c));
+  const catOpts = shuffle([catStr].concat(pickDistractors(catStr, catPool, 3)));
+  const ratio = num / b.chapters;
+  const pos = ratio <= 0.34 ? '前三分之一' : (ratio <= 0.67 ? '中间三分之一' : '后三分之一');
+  const posPool = ['前三分之一', '中间三分之一', '后三分之一'];
+  const posOpts = shuffle([pos].concat(pickDistractors(pos, posPool, 2)));
+  return [
+    { q: `${b.name} 第${num}章的主题是什么？`, options: themeOpts },
+    { q: `这卷书（${b.name}）的作者是谁？`, options: authorOpts },
+    { q: `${b.name} 属于圣经的哪一部分？`, options: catOpts },
+    { q: `第${num}章位于《${b.name}》（共${b.chapters}章）的哪个位置？`, options: posOpts }
+  ];
+}
+function quizSection(qKey) {
+  return `
+  <!-- ⑨ 本章知识问答挑战 -->
+  <section class="step" data-step="9">
+    <div class="step-head"><span class="step-badge">⑨</span><div class="step-title"><h3>本章知识问答挑战</h3><p>4 道小题，检验你对本章和本书的了解</p></div></div>
+    <div class="step-body">
+      <div id="quiz-wrap-${qKey}">
+        <div style="text-align:center;padding:8px 0">
+          <button class="btn gold" onclick="startChapterQuiz('${qKey}')">🧠 开始挑战</button>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+window.startChapterQuiz = function (key) {
+  const wrap = document.getElementById('quiz-wrap-' + key);
+  if (!wrap) return;
+  const parts = key.split('.');
+  const qs = chapterQuiz(parts[0], parseInt(parts[1], 10));
+  const best = store.quiz[key] || 0;
+  let html = `<div class="quiz-best">🏆 历史最佳：${best} / ${qs.length}</div>`;
+  qs.forEach((q, qi) => {
+    html += `<div class="quiz-q" data-qn="${qi}">
+      <div class="step-question">${qi + 1}. ${esc(q.q)}</div>
+      <div class="options">` +
+      q.options.map(o => `<button class="option" data-quiz="${key}" data-qn="${qi}" data-correct="${o === q.options[0] ? 'false' : ''}" onclick="quizAnswer(this,'${key}')"><span class="o-key">${'ABCD'[q.options.indexOf(o)]}</span>${esc(o)}</button>`).join('') +
+      `</div></div>`;
+  });
+  wrap.innerHTML = html;
+};
+window.quizAnswer = function (el, key) {
+  const qn = el.dataset.qn;
+  const correct = el.dataset.correct === 'true';
+  const group = document.querySelectorAll(`.option[data-quiz="${key}"][data-qn="${qn}"]`);
+  group.forEach(o => o.disabled = true);
+  if (correct) {
+    el.classList.add('correct');
+    store.quiz[key] = (store.quiz[key] || 0) + 1;
+    saveStore();
+    toast('🎉 答对了！');
+  } else {
+    el.classList.add('wrong');
+    toast('🤔 答错了，再想想');
+  }
+  const wrap = document.getElementById('quiz-wrap-' + key);
+  if (wrap) {
+    const answered = wrap.querySelectorAll('.option[data-quiz="' + key + '"]:disabled').length;
+    const total = wrap.querySelectorAll('.option[data-quiz="' + key + '"]').length;
+    if (answered >= total) {
+      const score = store.quiz[key] || 0;
+      const qCount = wrap.querySelectorAll('.quiz-q').length;
+      wrap.insertAdjacentHTML('beforeend', `<div class="quiz-result">
+        <div class="qr-emoji">${score === qCount ? '🌟' : (score >= qCount / 2 ? '👍' : '💪')}</div>
+        <b>挑战完成！得分 ${score} / ${qCount}</b>
+        <p>${score === qCount ? '满分！你对本章了如指掌！' : (score >= qCount / 2 ? '不错，继续加油！' : '再挑战一次，会更好！')}</p>
+        <button class="btn gold sm" onclick="startChapterQuiz('${key}')">🔄 再来一次</button>
+      </div>`);
+      toast('🏁 挑战完成');
+    }
+  }
+};
 
 /* ---------- 背景轻音乐 ---------- */
 window.toggleBgMusic = function () {

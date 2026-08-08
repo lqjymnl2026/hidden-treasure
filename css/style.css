@@ -531,3 +531,53 @@ input, textarea { font-family: inherit; }
   }
   .nav-links a:active { background: var(--cream); }
 }
+
+/* ============ 创意功能：每日珍宝 / 徽章 / 日历 / 经文讲解 / 问答 ============ */
+.treasure-card { padding: 24px; background: linear-gradient(135deg, #fff, #fbf4e4); border-color: #efe3c8; }
+.tc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.tc-badge { background: linear-gradient(135deg, #c9a24b, #b38736); color: #fff; font-weight: 800; padding: 4px 12px; border-radius: 999px; font-size: 13px; }
+.tc-date { margin-left: auto; color: var(--muted); font-size: 13px; }
+.tc-verse { font-family: var(--serif); font-size: 20px; line-height: 1.8; color: #4a3f24; }
+.tc-ref { margin-top: 8px; color: var(--gold-deep); font-weight: 700; }
+.tc-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+.badge-count { font-weight: 800; margin-bottom: 14px; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.badge { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 12px; text-align: center; }
+.badge .bd-emoji { font-size: 30px; }
+.badge b { display: block; font-size: 15px; margin-top: 4px; }
+.badge span { font-size: 12px; color: var(--muted); }
+.badge.got { border-color: var(--gold); background: #fdf8ec; }
+.badge.lock { opacity: .55; filter: grayscale(.4); }
+
+.cal-grid { display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px; }
+.cal-cell { aspect-ratio: 1; border-radius: 3px; background: var(--cream); }
+.cal-cell.l1 { background: #e8d9b0; }
+.cal-cell.l2 { background: #d9b96a; }
+.cal-cell.l3 { background: #c9a24b; }
+.cal-legend { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.cal-legend .cal-cell { width: 14px; height: 14px; aspect-ratio: auto; }
+
+.explain-card { padding: 26px; margin-top: 22px; }
+.ex-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.ex-badge { background: linear-gradient(135deg, #3b4a7a, #2c3860); color: #fff; font-weight: 800; padding: 5px 14px; border-radius: 999px; font-size: 13px; }
+.ex-ref { color: var(--muted); font-size: 13px; }
+.ex-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+.ex-item { background: #f8f4ea; border-radius: 10px; padding: 10px 12px; }
+.ex-item b { display: block; font-size: 12px; color: var(--muted); }
+.ex-item span { font-size: 14px; font-weight: 700; }
+.ex-block { border-top: 1px dashed var(--line); padding: 12px 0 4px; }
+.ex-block b { color: var(--indigo-deep); font-size: 14px; }
+.ex-block p { font-size: 14.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.8; }
+.ex-block.gold b { color: var(--gold-deep); }
+
+.quiz-best { font-weight: 800; color: var(--gold-deep); margin-bottom: 12px; }
+.quiz-q { margin-bottom: 18px; }
+.quiz-result { text-align: center; background: #fdf8ec; border: 1px solid #efe0bb; border-radius: 14px; padding: 22px; margin-top: 12px; }
+.quiz-result .qr-emoji { font-size: 40px; }
+.quiz-result b { font-size: 18px; }
+.quiz-result p { color: var(--muted); font-size: 14px; margin: 6px 0 12px; }
+@media (max-width: 720px) {
+  .ex-grid { grid-template-columns: 1fr; }
+  .cal-grid { grid-template-columns: repeat(20, 1fr); }
+}
