@@ -1681,6 +1681,49 @@ function readingSection(b, num, qKey, lesson) {
     <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 读经是查经的基础。读完本章，再进入下面的讲解与互动。</div>
   </div>`;
 }
+function explainExtraBlocks(b, num, title, T, catName, scale) {
+  const n = Math.max(0, Math.min(14, Math.round((scale - 0.6) * 6)));
+  const themed = T.slice(0, 3).map((w) =>
+    '围绕「' + w + '」再思想：《' + b.name + '》第' + num + '章把「' + w + '」放在我们面前，神要我们不只是知道这个词，更要在生活中经历它、活出它。试着写下：本周我在哪一件事上，最需要在「' + w + '」上信靠神？');
+  const base = [
+    '更深一步：本章提醒我们，神的话语不是用来满足好奇心的，而是用来改变生命的。读经之后，若没有带来敬拜、感恩或顺服的回应，就还没有真正「读进去」。',
+    '从结构看：留意本章在上下文中的位置——它承接上一章，也引向下一章；试着找出本章的「转折点」，往往那里藏着最重要的信息。',
+    '从人物看：本章中的人物或说话者是谁？他们的反应给你什么提醒？把自己放进场景里：如果我在场，我会怎样回应？',
+    '从应许看：本章有没有神的应许？抓住应许，把它带进祷告，为着自己、家人和教会祈求，让应许在生命中生根。',
+    '从命令看：本章有没有神的命令或劝勉？选择其中一条，定一个本周可以执行的小行动，具体到时间、地点与对象。',
+    '从警告看：本章若提到罪的后果或警告，要存敬畏的心领受；求主保守我们远离试探，赐我们警醒与力量。',
+    '从祷告看：把本章变成一篇祷告——用经文的话向神说话，感谢祂的启示，承认自己的亏欠，恳求圣灵帮助。',
+    '从敬拜看：本章有没有值得你向神献上赞美的理由？今天就为这件事赞美神，把你的敬拜化为口中的感谢。',
+    '从见证看：本章最想分享给哪一位朋友？试着用你自己的话讲一遍本章的要点，把领受传递出去。',
+    '从默想看：选本章一节经文，今天反复默想三遍，让它成为你今天生活的「背景音乐」。'
+  ];
+  const pool = themed.concat(base);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(pool[i % pool.length] + ' 愿你在今天的生活中，把这一点化作具体的祷告与行动，经历神的信实与同在。');
+  return out;
+}
+function renderExplainDetail(bookId, num) {
+  const d = buildDetailedExplain(bookId, num);
+  const b = getBook(bookId);
+  const len = bibleTextLen[bookId + '.' + num] || 1800;
+  const scale = Math.max(0.5, Math.min(3.5, len / 1800));
+  const extras = explainExtraBlocks(b, num, d.title, d.themeWords, b.category, scale);
+  const extraHtml = extras.length ? '<h4>深度扩展（按本章字数比例生成）</h4>' + extras.map((e, i) => '<p><b>扩展' + (i + 1) + '：</b>' + esc(e) + '</p>').join('') : '';
+  const longHtml = scale >= 2 ? '<h4>长章深化（本章较长，另加两段默想）</h4>' +
+    '<p><b>默想引导：</b>面对较长的经文，不必急于一次读完所有细节。可以分段默想：先读一遍把握大意，再选一段反复咀嚼，把触动你的句子圈出来，用祷告回应。神的话一句一句吃进去，比囫囵吞枣更有力量。</p>' +
+    '<p><b>背诵与分享：</b>从本章选两节经文作为本周背诵目标，一天记一节；并尝试用自己的话向一位家人或朋友分享本章最重要的信息。说出来的真理，会在心里扎根更深。</p>' : '';
+  return '<div class="ex-size">📏 本章经文 ' + len + ' 字 · 讲解已按字数比例生成' + (extras.length ? '（含' + extras.length + '段深度扩展）' : '') + '</div>' +
+    '<div class="ex-sec"><h4>一、经文概论</h4><p>' + esc(d.overview) + '</p></div>' +
+    '<div class="ex-sec"><h4>二、经文背景</h4><p>' + esc(d.background) + '</p></div>' +
+    '<div class="ex-sec"><h4>三、原文解释</h4><p>' + esc(d.orig) + '</p></div>' +
+    '<div class="ex-sec"><h4>四、分段大纲</h4><pre class="ex-pre">' + esc(d.outline) + '</pre></div>' +
+    '<div class="ex-sec gold"><h4>五、存心节</h4><p>' + (d.memory ? esc(d.memory) : '建议：本章主题是「' + esc(d.title) + '」，请挑选一节最触动你的经文作为存心节，反复默想、背记。') + '</p></div>' +
+    '<div class="ex-sec"><h4>六、属灵教训</h4><pre class="ex-pre">' + esc(d.lessons) + '</pre></div>' +
+    '<div class="ex-sec"><h4>七、讲章</h4><pre class="ex-pre">' + esc(d.sermon) + '</pre></div>' +
+    (extraHtml ? '<div class="ex-sec">' + extraHtml + '</div>' : '') +
+    (longHtml ? '<div class="ex-sec">' + longHtml + '</div>' : '') +
+    '<div class="ex-sec gold"><h4>八、金句赏析与默想</h4><p>' + esc(d.verseNote) + '</p></div>';
+}
 function explainSection(bookId, num) {
   const d = buildDetailedExplain(bookId, num);
   const b = getBook(bookId);
@@ -1698,14 +1741,7 @@ function explainSection(bookId, num) {
     <div class="ex-block"><b>🎯 本书核心主题</b><p>${esc(b.theme)}</p></div>
     <button class="btn gold sm ex-toggle" onclick="toggleExplain('${bookId}-${num}')">📖 展开完整详细讲解（概论 · 背景 · 原文 · 分段 · 存心节 · 属灵教训 · 讲章）</button>
     <div class="ex-detail" id="ex-detail-${bookId}-${num}" style="display:none">
-      <div class="ex-sec"><h4>一、经文概论</h4><p>${esc(d.overview)}</p></div>
-      <div class="ex-sec"><h4>二、经文背景</h4><p>${esc(d.background)}</p></div>
-      <div class="ex-sec"><h4>三、原文解释</h4><p>${esc(d.orig)}</p></div>
-      <div class="ex-sec"><h4>四、分段大纲</h4><pre class="ex-pre">${esc(d.outline)}</pre></div>
-      <div class="ex-sec gold"><h4>五、存心节</h4><p>${d.memory ? esc(d.memory) : '建议：本章主题是「' + esc(d.title) + '」，请挑选一节最触动你的经文作为存心节，反复默想、背记。'}</p></div>
-      <div class="ex-sec"><h4>六、属灵教训</h4><pre class="ex-pre">${esc(d.lessons)}</pre></div>
-      <div class="ex-sec"><h4>七、讲章</h4><pre class="ex-pre">${esc(d.sermon)}</pre></div>
-      <div class="ex-sec gold"><h4>八、金句赏析与默想</h4><p>${esc(d.verseNote)}</p></div>
+      ${renderExplainDetail(bookId, num)}
     </div>
   </div>`;
 }
@@ -1855,6 +1891,7 @@ window.submitQuiz = function (key) {
 const BIBLE_TEXT_CACHE = 'yiqi-bibletext-cache-v1';
 const BIBLE_TEXT_RAW = 'yiqi-bibletext-raw-v1';
 const bibleTextRaw = {};
+const bibleTextLen = {};
 function cachedChapter(key) {
   try { const c = JSON.parse(localStorage.getItem(BIBLE_TEXT_CACHE) || '{}'); return c[key] ? c[key].t : null; } catch (e) { return null; }
 }
@@ -1898,6 +1935,9 @@ async function loadChapterText(key) {
       data.verses.map(v => '<p><sup>' + v.verse + '</sup>' + esc(clean(v.text)) + '</p>').join('');
     const rawText = data.verses.map(v => clean(v.text).replace(/[。！？；]+$/, '')).join('。') + '。';
     bibleTextRaw[key] = rawText;
+    bibleTextLen[key] = rawText.length;
+    const exEl = document.getElementById('ex-detail-' + bookId + '-' + num);
+    if (exEl) exEl.innerHTML = renderExplainDetail(bookId, num);
     box.innerHTML = html;
     cacheChapter(key, html);
     cacheRaw(key, rawText);
