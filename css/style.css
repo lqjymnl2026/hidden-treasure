@@ -589,3 +589,11 @@ input, textarea { font-family: inherit; }
   transition: border-color .15s, background .15s, transform .15s;
 }
 .footer .tags a.tag-link:hover { border-color: var(--gold); background: #fdf8ec; transform: translateY(-1px); }
+
+/* ============ 阅读经文 ============ */
+.bible-text { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.bible-text .bt-ref { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--gold-deep); margin-bottom: 10px; }
+.bible-text p { font-family: var(--serif); font-size: 15.5px; line-height: 2.1; color: #4a3f24; margin-bottom: 2px; }
+.bible-text sup { font-size: 11px; color: var(--gold-deep); margin-right: 3px; font-weight: 700; }
+.bt-loading { color: var(--muted); font-size: 14px; padding: 6px 0; }
+.bt-error { color: #9b2c2c; font-size: 14px; padding: 8px 0; }

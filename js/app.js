@@ -448,6 +448,7 @@ function renderChapter(app, bookId, num) {
     </div>` : ''}
   </div>`;
   try { initRecorder(qKey); } catch (e) {}
+  try { loadChapterText(chKey(b.id, num)); } catch (e) {}
 }
 
 function renderChapterJump(bookId, num) {
@@ -665,7 +666,8 @@ function renderCuratedSteps(b, num, lesson, note, done) {
       <div class="passage-box">
         <div class="pb-ref">📖 ${lesson.passage}</div>
         <div class="pb-verse">${lesson.memoryVerse}</div>
-        <p class="pb-note">💡 请打开你手边的圣经（或在线圣经）通读本章。读到触动你的句子时，停下来默想一下。</p>
+        <p class="pb-note">💡 下面是本章完整经文（和合本简体），慢慢读，读到触动你的句子时停下来默想。</p>
+        <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
       </div>
       <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
       <button class="btn ghost sm" onclick="speakVerse('${qKey}')">🔊 朗读</button>
@@ -770,7 +772,8 @@ function renderGenericSteps(b, num, title, note, done) {
     <div class="step-body">
       <div class="passage-box">
         <div class="pb-ref">📖 ${b.name} ${num}章</div>
-        <p class="pb-note">💡 请打开你手边的圣经（或在线圣经）通读本章。留意：谁？在哪里？发生什么？神说了什么？</p>
+        <p class="pb-note">💡 下面是本章完整经文（和合本简体），慢慢读。留意：谁？在哪里？发生什么？神说了什么？</p>
+        <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
       </div>
       <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
       <button class="btn ghost sm" onclick="speakVerse('${qKey}')">🔊 朗读</button>
@@ -1525,32 +1528,50 @@ function chapterQuiz(bookId, num) {
   const themePool = (CHAPTER_THEMES[bookId] && CHAPTER_THEMES[bookId].length > 4)
     ? CHAPTER_THEMES[bookId].slice()
     : Object.values(CHAPTER_THEMES).flat();
-  const mk = (correct, distractors) => shuffle([{ text: correct, correct: true }].concat(distractors.map(tx => ({ text: tx, correct: false }))));
-  const themeOpts = mk(correctTheme, pickDistractors(correctTheme, themePool, 3));
-  const authorOpts = mk(b.author, pickDistractors(b.author, BOOKS.map(x => x.author), 3));
-  const catStr = t.name + ' · ' + b.category;
+  const themeTitles = (CHAPTER_THEMES[bookId] || []).slice();
+  const authorPool = BOOKS.map(x => x.author);
   const catPool = TESTAMENTS.flatMap(tt => tt.categories.map(c => tt.name + ' · ' + c));
-  const catOpts = mk(catStr, pickDistractors(catStr, catPool, 3));
+  const kwPool = BOOKS.map(x => x.theme).join('、').split('、').map(s => s.trim()).filter(Boolean);
+  const tagPool = BOOKS.map(x => x.tagline);
+  const mk = (correct, distractors, n) => shuffle([{ text: correct, correct: true }].concat(pickDistractors(correct, distractors, n || 3).map(tx => ({ text: tx, correct: false }))));
+  const catStr = t.name + ' · ' + b.category;
   const ratio = num / b.chapters;
   const pos = ratio <= 0.34 ? '前三分之一' : (ratio <= 0.67 ? '中间三分之一' : '后三分之一');
-  const posOpts = mk(pos, pickDistractors(pos, ['前三分之一', '中间三分之一', '后三分之一'], 2));
-  return [
-    { q: `${b.name} 第${num}章的主题是什么？`, options: themeOpts },
-    { q: `这卷书（${b.name}）的作者是谁？`, options: authorOpts },
-    { q: `${b.name} 属于圣经的哪一部分？`, options: catOpts },
-    { q: `第${num}章位于《${b.name}》（共${b.chapters}章）的哪个位置？`, options: posOpts }
-  ];
+  const themeWords = b.theme.split('、').map(s => s.trim()).filter(Boolean);
+  const prevTitle = num > 1 ? chapterTitle(bookId, num - 1) : null;
+  const nextTitle = num < b.chapters ? chapterTitle(bookId, num + 1) : null;
+  const Q = [];
+  const add = (q, options) => Q.push({ q, options });
+  add(`${b.name} 第${num}章的主题是什么？`, mk(correctTheme, themePool));
+  add(`${b.name} 第${num}章最适合的标题是？`, mk(correctTheme, themePool));
+  add(`《${b.name}》的作者是谁？`, mk(b.author, authorPool));
+  add(`这卷书（${b.name}）通常被认为是由谁写作的？`, mk(b.author, authorPool));
+  add(`《${b.name}》属于圣经的哪一部分？`, mk(catStr, catPool));
+  add(`《${b.name}》属于哪一类别？`, mk(b.category, TESTAMENTS.flatMap(tt => tt.categories), 3));
+  add(`《${b.name}》属于旧约还是新约？`, mk(t.name, ['旧约', '新约'], 1));
+  add(`《${b.name}》一共有多少章？`, mk(b.chapters + '章', [Math.max(1, b.chapters - 6) + '章', (b.chapters + 6) + '章', Math.max(1, b.chapters - 13) + '章'], 3));
+  add(`第${num}章位于《${b.name}》（共${b.chapters}章）的哪个位置？`, mk(pos, ['前三分之一', '中间三分之一', '后三分之一'], 2));
+  add(`按阅读进度看，第${num}章大约在《${b.name}》的什么位置？`, mk(pos, ['前三分之一', '中间三分之一', '后三分之一'], 2));
+  add(`《${b.name}》的主题词／别称是？`, mk(b.tagline, tagPool));
+  add(`哪一项属于《${b.name}》的核心主题？`, mk(themeWords[0] || b.tagline, kwPool));
+  add(`以下哪个关键词与《${b.name}》的核心主题最相关？`, mk(themeWords[Math.min(1, themeWords.length - 1)] || b.tagline, kwPool));
+  if (prevTitle) add(`《${b.name}》第${num - 1}章的主题是什么？`, mk(prevTitle, themeTitles.length > 4 ? themeTitles : themePool));
+  if (nextTitle) add(`《${b.name}》第${num + 1}章的主题是什么？`, mk(nextTitle, themeTitles.length > 4 ? themeTitles : themePool));
+  let guard = 0;
+  while (Q.length < 15 && guard++ < 20) add(`《${b.name}》第${num}章的经文主题是？`, mk(correctTheme, themePool));
+  return Q.slice(0, 15);
 }
 const quizRun = {};
 function quizSection(qKey) {
   return `
   <!-- ⑨ 本章知识问答挑战 -->
   <section class="step" data-step="9">
-    <div class="step-head"><span class="step-badge">⑨</span><div class="step-title"><h3>本章知识问答挑战</h3><p>4 道小题，检验你对本章和本书的了解</p></div></div>
+    <div class="step-head"><span class="step-badge">⑨</span><div class="step-title"><h3>本章知识问答挑战</h3><p>15 道小题，检验你对本章和本书的了解；可随时换一批新题</p></div></div>
     <div class="step-body">
       <div id="quiz-wrap-${qKey}">
-        <div style="text-align:center;padding:8px 0">
+        <div style="text-align:center;padding:8px 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
           <button class="btn gold" onclick="startChapterQuiz('${qKey}')">🧠 开始挑战</button>
+          <button class="btn ghost" onclick="startChapterQuiz('${qKey}')">🔀 换一批挑战</button>
         </div>
       </div>
     </div>
@@ -1607,7 +1628,48 @@ window.quizAnswer = function (el, key) {
   }
 };
 
-/* ---------- 背景轻音乐 ---------- */
+/* ---------- 阅读经文（在线和合本简体） ---------- */
+const BIBLE_TEXT_CACHE = 'yiqi-bibletext-cache-v1';
+function cachedChapter(key) {
+  try { const c = JSON.parse(localStorage.getItem(BIBLE_TEXT_CACHE) || '{}'); return c[key] ? c[key].t : null; } catch (e) { return null; }
+}
+function cacheChapter(key, html) {
+  try {
+    const c = JSON.parse(localStorage.getItem(BIBLE_TEXT_CACHE) || '{}');
+    c[key] = { t: html, ts: Date.now() };
+    const ks = Object.keys(c);
+    if (ks.length > 25) { ks.sort((x, y) => c[x].ts - c[y].ts); delete c[ks[0]]; }
+    localStorage.setItem(BIBLE_TEXT_CACHE, JSON.stringify(c));
+  } catch (e) {}
+}
+async function loadChapterText(key) {
+  const box = document.getElementById('bible-text-' + key);
+  if (!box) return;
+  const parts = String(key).split('.');
+  const bookId = parts[0], num = parseInt(parts[1], 10);
+  const cached = cachedChapter(key);
+  if (cached) { box.innerHTML = cached; return; }
+  box.innerHTML = '<div class="bt-loading">📖 正在加载本章经文…</div>';
+  try {
+    const bookNr = BOOKS.findIndex(x => x.id === bookId) + 1;
+    const res = await fetch('https://api.getbible.net/v2/cus/' + bookNr + '/' + num + '.json');
+    if (!res.ok) throw new Error('bad status ' + res.status);
+    const data = await res.json();
+    const clean = (s) => String(s || '').replace(/\ufeff/g, '').replace(/\u3000/g, ' ').trim();
+    const html = '<div class="bt-ref">📖 ' + esc(clean(data.name)) + '（和合本·简体）</div>' +
+      data.verses.map(v => '<p><sup>' + v.verse + '</sup>' + esc(clean(v.text)) + '</p>').join('');
+    box.innerHTML = html;
+    cacheChapter(key, html);
+  } catch (e) {
+    const b = getBook(bookId);
+    const link = 'https://www.biblegateway.com/passage/?search=' + encodeURIComponent((b ? b.en : bookId) + ' ' + num) + '&version=CUVS';
+    box.innerHTML = '<div class="bt-error">⚠️ 经文加载失败（可能网络问题）。<br>' +
+      '<button class="btn ghost sm" onclick="loadChapterText(\'' + key + '\')">🔄 重试</button> ' +
+      '<a class="btn ghost sm" target="_blank" rel="noopener" href="' + link + '">🔗 在线阅读</a></div>';
+  }
+}
+
+/* ---------- 背景轻音乐 ---------- *//* ---------- 背景轻音乐 ---------- */
 window.toggleBgMusic = function () {
   const a = document.getElementById('bgMusic');
   const btn = document.getElementById('bgMusicBtn');
