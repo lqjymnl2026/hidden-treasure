@@ -621,3 +621,8 @@ input, textarea { font-family: inherit; }
 .ex-sec.gold h4 { color: var(--gold-deep); }
 .ex-sec p { font-size: 14.5px; color: var(--ink-soft); line-height: 1.9; }
 .ex-pre { white-space: pre-wrap; font-family: inherit; font-size: 14.5px; line-height: 1.9; color: var(--ink-soft); background: #fbf8f0; border-radius: 10px; padding: 12px 14px; }
+
+.reading-top { padding: 22px; margin-top: 22px; }
+.rt-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.rt-badge { background: linear-gradient(135deg, #c9a24b, #b38736); color: #fff; font-weight: 800; padding: 5px 14px; border-radius: 999px; font-size: 13px; }
+.rt-ref { color: var(--muted); font-size: 13px; }

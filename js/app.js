@@ -450,6 +450,8 @@ function renderChapter(app, bookId, num) {
 
     ${renderChapterJump(b.id, num)}
 
+    ${readingSection(b, num, chKey(b.id, num), lesson)}
+
     ${explainSection(b.id, num)}
 
     <div class="steps">
@@ -498,7 +500,7 @@ function recorderSection(qKey) {
   return `
   <!-- ⑧ 我的祷告录音 -->
   <section class="step" data-step="8">
-    <div class="step-head"><span class="step-badge gold-badge">⑧</span><div class="step-title"><h3>我的祷告录音</h3><p>把今天的祷告录下来，可以回放，也可以导出保存到手机或电脑</p></div></div>
+    <div class="step-head"><span class="step-badge gold-badge">⑦</span><div class="step-title"><h3>我的祷告录音</h3><p>把今天的祷告录下来，可以回放，也可以导出保存到手机或电脑</p></div></div>
     <div class="step-body">
       <div class="rec-box">
         <div class="rec-timer" id="rec-timer-${qKey}">00:00</div>
@@ -685,25 +687,9 @@ function renderCuratedSteps(b, num, lesson, note, done) {
     </div>
   </section>
 
-  <!-- ② 阅读经文 -->
-  <section class="step" data-step="2">
-    <div class="step-head"><span class="step-badge gold-badge">②</span><div class="step-title"><h3>阅读经文</h3><p>慢慢读，留意触动你的字句</p></div></div>
-    <div class="step-body">
-      <div class="passage-box">
-        <div class="pb-ref">📖 ${lesson.passage}</div>
-        <div class="pb-verse">${lesson.memoryVerse}</div>
-        <p class="pb-note">💡 下面是本章完整经文（和合本简体），慢慢读，读到触动你的句子时停下来默想。</p>
-        <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
-      </div>
-      <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
-      <button class="btn ghost sm" onclick="speakChapter('${qKey}')">🔊 朗读全文</button>
-      <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 读经是查经的基础。接下来我们一起来观察这段经文。</div>
-    </div>
-  </section>
-
   <!-- ③ 经文观察 -->
   <section class="step" data-step="3">
-    <div class="step-head"><span class="step-badge">③</span><div class="step-title"><h3>经文观察</h3><p>系统不直接解释，先问「经文说了什么」</p></div></div>
+    <div class="step-head"><span class="step-badge">②</span><div class="step-title"><h3>经文观察</h3><p>系统不直接解释，先问「经文说了什么」</p></div></div>
     <div class="step-body">
       <div class="step-question">${lesson.observation.question}</div>
       <div class="options">
@@ -716,7 +702,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
 
   <!-- ④ 发现圣经 -->
   <section class="step" data-step="4">
-    <div class="step-head"><span class="step-badge gold-badge">④</span><div class="step-title"><h3>发现圣经</h3><p>这一步没有唯一答案，可能全选哦</p></div></div>
+    <div class="step-head"><span class="step-badge gold-badge">③</span><div class="step-title"><h3>发现圣经</h3><p>这一步没有唯一答案，可能全选哦</p></div></div>
     <div class="step-body">
       <div class="step-question">${lesson.discovery.question}</div>
       <div class="options">
@@ -730,7 +716,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
 
   <!-- ⑤ 一起讨论 -->
   <section class="step" data-step="5">
-    <div class="step-head"><span class="step-badge">⑤</span><div class="step-title"><h3>一起讨论</h3><p>写下你的回答，或看看其他学友的想法</p></div></div>
+    <div class="step-head"><span class="step-badge">④</span><div class="step-title"><h3>一起讨论</h3><p>写下你的回答，或看看其他学友的想法</p></div></div>
     <div class="step-body">
       <div class="step-question">${lesson.discussion.prompt}</div>
       <div class="write-box">
@@ -747,7 +733,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
 
   <!-- ⑥ 今天应用 -->
   <section class="step" data-step="6">
-    <div class="step-head"><span class="step-badge gold-badge">⑥</span><div class="step-title"><h3>今天应用</h3><p>把圣经从「读完」变成「活出来」</p></div></div>
+    <div class="step-head"><span class="step-badge gold-badge">⑤</span><div class="step-title"><h3>今天应用</h3><p>把圣经从「读完」变成「活出来」</p></div></div>
     <div class="step-body">
       <div class="step-question">${lesson.application.prompt}</div>
       <div class="write-box">
@@ -762,7 +748,7 @@ function renderCuratedSteps(b, num, lesson, note, done) {
 
   <!-- ⑦ 今日祷告 -->
   <section class="step" data-step="7">
-    <div class="step-head"><span class="step-badge">⑦</span><div class="step-title"><h3>今日祷告</h3><p>系统根据今天的主题生成了祷告引导</p></div></div>
+    <div class="step-head"><span class="step-badge">⑥</span><div class="step-title"><h3>今日祷告</h3><p>系统根据今天的主题生成了祷告引导</p></div></div>
     <div class="step-body">
       <div class="passage-box" style="background:#eef3fb;border-color:#d6e2f5;border-left-color:var(--indigo)">
         <div class="pb-verse">🙏 ${lesson.prayer}</div>
@@ -794,20 +780,7 @@ function renderGenericSteps(b, num, title, note, done) {
     </div>
   </section>
   <section class="step">
-    <div class="step-head"><span class="step-badge gold-badge">②</span><div class="step-title"><h3>阅读经文</h3><p>慢慢读，留意触动你的字句</p></div></div>
-    <div class="step-body">
-      <div class="passage-box">
-        <div class="pb-ref">📖 ${b.name} ${num}章</div>
-        <p class="pb-note">💡 下面是本章完整经文（和合本简体），慢慢读。留意：谁？在哪里？发生什么？神说了什么？</p>
-        <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
-      </div>
-      <button class="btn ghost sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
-      <button class="btn ghost sm" onclick="speakChapter('${qKey}')">🔊 朗读全文</button>
-      <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 很好！读完之后，试着用自己的话总结这一章。</div>
-    </div>
-  </section>
-  <section class="step">
-    <div class="step-head"><span class="step-badge">③</span><div class="step-title"><h3>经文观察</h3><p>问三个问题：谁、发生了什么、结果如何</p></div></div>
+    <div class="step-head"><span class="step-badge">②</span><div class="step-title"><h3>经文观察</h3><p>问三个问题：谁、发生了什么、结果如何</p></div></div>
     <div class="step-body">
       <div class="step-question">试着回答：「这一章主要讲了什么？有什么关键词或重复出现的词？」</div>
       <div class="write-box">
@@ -817,7 +790,7 @@ function renderGenericSteps(b, num, title, note, done) {
     </div>
   </section>
   <section class="step">
-    <div class="step-head"><span class="step-badge gold-badge">④</span><div class="step-title"><h3>发现圣经</h3><p>这段经文让我更多认识神和祂的旨意吗？</p></div></div>
+    <div class="step-head"><span class="step-badge gold-badge">③</span><div class="step-title"><h3>发现圣经</h3><p>这段经文让我更多认识神和祂的旨意吗？</p></div></div>
     <div class="step-body">
       <div class="step-question">从这一章里，你发现关于神（祂的属性、祂的作为）或关于人（我们的本相、当行的路）的什么真理？</div>
       <div class="write-box">
@@ -827,7 +800,7 @@ function renderGenericSteps(b, num, title, note, done) {
     </div>
   </section>
   <section class="step">
-    <div class="step-head"><span class="step-badge">⑤</span><div class="step-title"><h3>一起讨论</h3><p>把经文和我的生活连起来</p></div></div>
+    <div class="step-head"><span class="step-badge">④</span><div class="step-title"><h3>一起讨论</h3><p>把经文和我的生活连起来</p></div></div>
     <div class="step-body">
       <div class="step-question">这一章里，最触动你的一句话是什么？它和你现在的处境有什么关系？</div>
       <div class="write-box">
@@ -837,7 +810,7 @@ function renderGenericSteps(b, num, title, note, done) {
     </div>
   </section>
   <section class="step">
-    <div class="step-head"><span class="step-badge gold-badge">⑥</span><div class="step-title"><h3>今天应用</h3><p>把圣经从「读完」变成「活出来」</p></div></div>
+    <div class="step-head"><span class="step-badge gold-badge">⑤</span><div class="step-title"><h3>今天应用</h3><p>把圣经从「读完」变成「活出来」</p></div></div>
     <div class="step-body">
       <div class="step-question">基于这一章，今天你可以做一个什么具体的行动？（哪怕很小）</div>
       <div class="write-box">
@@ -847,7 +820,7 @@ function renderGenericSteps(b, num, title, note, done) {
     </div>
   </section>
   <section class="step">
-    <div class="step-head"><span class="step-badge">⑦</span><div class="step-title"><h3>今日祷告</h3><p>用祷告回应今天所学</p></div></div>
+    <div class="step-head"><span class="step-badge">⑥</span><div class="step-title"><h3>今日祷告</h3><p>用祷告回应今天所学</p></div></div>
     <div class="step-body">
       <div class="passage-box" style="background:#eef3fb;border-color:#d6e2f5;border-left-color:var(--indigo)">
         <div class="pb-verse">🙏 主啊，感谢你藉着${b.name} ${num}章对我说话。求你让我不只「读完」这一章，更能「活出」你的话语。求你光照我、引导我，使我今天有一个顺服的行动。奉耶稣的名，阿们。</div>
@@ -1691,6 +1664,23 @@ function buildDetailedExplain(bookId, num) {
   ].join('\n\n');
   return { title, posKey, cat, themeWords: T, memory, overview, background, orig, outline: outline.join('\n'), lessons, sermon, app };
 }
+function readingSection(b, num, qKey, lesson) {
+  return `
+  <div class="card reading-top">
+    <div class="rt-head"><span class="rt-badge">📖 阅读圣经</span><span class="rt-ref">${b.emoji} ${esc(b.name)} 第${num}章 · 共${b.chapters}章</span></div>
+    <div class="passage-box">
+      <div class="pb-ref">📖 ${lesson ? lesson.passage : b.name + ' 第' + num + '章'}</div>
+      ${lesson && lesson.memoryVerse ? `<div class="pb-verse">${lesson.memoryVerse}</div>` : ''}
+      <p class="pb-note">💡 下面是本章完整经文（和合本简体）。慢慢读，读到触动你的句子时停下来默想；也可点「🔊 朗读全文」听读。</p>
+      <div class="bible-text" id="bible-text-${qKey}"><div class="bt-loading">📖 正在加载本章经文…</div></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn gold sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
+      <button class="btn ghost sm" onclick="speakChapter('${qKey}')">🔊 朗读全文</button>
+    </div>
+    <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 读经是查经的基础。读完本章，再进入下面的讲解与互动。</div>
+  </div>`;
+}
 function explainSection(bookId, num) {
   const d = buildDetailedExplain(bookId, num);
   const b = getBook(bookId);
@@ -1786,7 +1776,7 @@ function quizSection(qKey) {
   return `
   <!-- ⑨ 本章知识问答挑战 -->
   <section class="step" data-step="9">
-    <div class="step-head"><span class="step-badge">⑨</span><div class="step-title"><h3>本章知识问答挑战</h3><p>15 道小题，检验你对本章和本书的了解；可随时换一批新题</p></div></div>
+    <div class="step-head"><span class="step-badge">⑧</span><div class="step-title"><h3>本章知识问答挑战</h3><p>15 道小题，检验你对本章和本书的了解；可随时换一批新题</p></div></div>
     <div class="step-body">
       <div id="quiz-wrap-${qKey}">
         <div style="text-align:center;padding:8px 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
