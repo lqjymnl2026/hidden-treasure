@@ -1290,7 +1290,13 @@ function renderFooter() {
       <div class="verse">「你的话是我脚前的灯，是我路上的光。」—— 诗篇 119:105</div>
       <div>📖 隐藏的珍宝｜66卷圣经互动学习平台 · 第一阶段原型</div>
       <div class="tags">
-        <span>66卷目录</span><span>分卷学习主页</span><span>章节七步互动</span><span>主题地图</span><span>人物地图</span><span>学习进度</span>
+        <a class="tag-link" href="#/">🏠 首页</a>
+        <a class="tag-link" href="#/books">📚 全圣经 · 66卷</a>
+        <a class="tag-link" href="#/themes">❤️ 主题地图</a>
+        <a class="tag-link" href="#/people">👤 人物地图</a>
+        <a class="tag-link" href="#/modes">🧭 四种查经模式</a>
+        <a class="tag-link" href="#/progress">🗺️ 我的旅程</a>
+        <a class="tag-link" href="./index.html">💎 返回首页</a>
       </div>
       <div style="margin-top:12px;opacity:.8">数据仅供学习参考 · 圣经经文请以纸质/权威译本为准</div>
       <div style="margin-top:14px"><a href="./index.html" style="color:var(--gold-deep);font-weight:700">← 返回隐藏的珍宝首页</a></div>

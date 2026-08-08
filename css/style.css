@@ -581,3 +581,11 @@ input, textarea { font-family: inherit; }
   .ex-grid { grid-template-columns: 1fr; }
   .cal-grid { grid-template-columns: repeat(20, 1fr); }
 }
+
+.footer .tags a.tag-link {
+  display: inline-block; margin: 4px; padding: 6px 13px;
+  background: #fff; border-radius: 999px; border: 1px solid var(--line);
+  font-size: 13px; font-weight: 600; color: var(--indigo-deep); text-decoration: none;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.footer .tags a.tag-link:hover { border-color: var(--gold); background: #fdf8ec; transform: translateY(-1px); }
