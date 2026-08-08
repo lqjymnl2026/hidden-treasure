@@ -613,3 +613,11 @@ input, textarea { font-family: inherit; }
 .foot-date { flex: 0 0 auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .foot-count { margin-top: 12px; font-size: 12.5px; color: var(--muted); text-align: center; }
 @media (max-width: 560px) { .foot-date { display: none; } }
+
+.ex-toggle { margin: 10px 0 4px; width: 100%; }
+.ex-detail { margin-top: 8px; }
+.ex-sec { border-top: 1px dashed var(--line); padding: 12px 0 2px; }
+.ex-sec h4 { color: var(--indigo-deep); font-size: 15px; margin-bottom: 6px; }
+.ex-sec.gold h4 { color: var(--gold-deep); }
+.ex-sec p { font-size: 14.5px; color: var(--ink-soft); line-height: 1.9; }
+.ex-pre { white-space: pre-wrap; font-family: inherit; font-size: 14.5px; line-height: 1.9; color: var(--ink-soft); background: #fbf8f0; border-radius: 10px; padding: 12px 14px; }
