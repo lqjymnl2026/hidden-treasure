@@ -1460,6 +1460,21 @@ window.speakVerse = function (key) {
   u.lang = 'zh-CN'; u.rate = 0.95;
   speechSynthesis.speak(u);
 };
+function chunkText(text, max) {
+  const t = String(text);
+  const chunks = [];
+  let buf = '';
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    buf += ch;
+    if (buf.length >= max || ('.。！？；'.indexOf(ch) >= 0 && buf.length >= 300)) {
+      chunks.push(buf);
+      buf = '';
+    }
+  }
+  if (buf) chunks.push(buf);
+  return chunks;
+}
 window.speakChapter = async function (key) {
   if (!window.speechSynthesis) { toast('⚠️ 当前浏览器不支持语音朗读'); return; }
   if (speechSynthesis.speaking) { speechSynthesis.cancel(); toast('⏹ 已停止朗读'); return; }
@@ -1473,10 +1488,21 @@ window.speakChapter = async function (key) {
   const parts = String(key).split('.');
   const b = getBook(parts[0]);
   const head = (b ? b.name + '，第' + parts[1] + '章。' : '');
+  const chunks = chunkText(head + raw, 450);
+  let idx = 0;
+  const speakNext = () => {
+    if (idx >= chunks.length) { toast('🔊 本章朗读完毕'); return; }
+    const u = new SpeechSynthesisUtterance(chunks[idx]);
+    u.lang = 'zh-CN'; u.rate = 0.9;
+    u.onend = () => { idx++; speakNext(); };
+    u.onerror = (e) => {
+      if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
+      idx++; speakNext();
+    };
+    speechSynthesis.speak(u);
+  };
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(head + raw);
-  u.lang = 'zh-CN'; u.rate = 0.9;
-  speechSynthesis.speak(u);
+  speakNext();
   toast('🔊 正在朗读本章全文…');
 };
 function badgeCheck() {
@@ -1737,9 +1763,10 @@ async function loadChapterText(key) {
     if (!res.ok) throw new Error('bad status ' + res.status);
     const data = await res.json();
     const clean = (s) => String(s || '').replace(/\ufeff/g, '').replace(/\u3000/g, ' ').trim();
-    const html = '<div class="bt-ref">📖 ' + esc(clean(data.name)) + '（和合本·简体）</div>' +
+    const refBook = (getBook(bookId) || {}).name || clean(data.name);
+    const html = '<div class="bt-ref">📖 ' + esc(refBook + ' 第' + num + '章') + '（和合本·简体）</div>' +
       data.verses.map(v => '<p><sup>' + v.verse + '</sup>' + esc(clean(v.text)) + '</p>').join('');
-    const rawText = data.verses.map(v => clean(v.text)).join('。').replace(/。$/,'') + '。';
+    const rawText = data.verses.map(v => clean(v.text).replace(/[。！？；]+$/, '')).join('。') + '。';
     bibleTextRaw[key] = rawText;
     box.innerHTML = html;
     cacheChapter(key, html);
