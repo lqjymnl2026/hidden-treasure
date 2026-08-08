@@ -597,3 +597,8 @@ input, textarea { font-family: inherit; }
 .bible-text sup { font-size: 11px; color: var(--gold-deep); margin-right: 3px; font-weight: 700; }
 .bt-loading { color: var(--muted); font-size: 14px; padding: 6px 0; }
 .bt-error { color: #9b2c2c; font-size: 14px; padding: 8px 0; }
+
+.option.selected { border-color: var(--gold); background: #fdf8ec; box-shadow: 0 0 0 3px rgba(201,162,75,.22); }
+.quiz-tip { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.quiz-submit { text-align: center; margin-top: 10px; }
+.qr-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }

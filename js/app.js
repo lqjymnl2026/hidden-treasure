@@ -1584,48 +1584,60 @@ window.startChapterQuiz = function (key) {
   const qs = chapterQuiz(parts[0], parseInt(parts[1], 10));
   quizRun[key] = 0;
   const best = store.quiz[key] || 0;
-  let html = `<div class="quiz-best">🏆 历史最佳：${best} / ${qs.length}</div>`;
+  let html = `<div class="quiz-best">🏆 历史最佳：${best} / ${qs.length}</div>
+  <div class="quiz-tip">请为每道题选择一个答案，然后点「提交答卷」查看评分</div>`;
   qs.forEach((q, qi) => {
     html += `<div class="quiz-q" data-qn="${qi}">
       <div class="step-question">${qi + 1}. ${esc(q.q)}</div>
       <div class="options">` +
-      q.options.map((o, oi) => `<button class="option" data-quiz="${key}" data-qn="${qi}" data-correct="${o.correct}" onclick="quizAnswer(this,'${key}')"><span class="o-key">${'ABCD'[oi]}</span>${esc(o.text)}</button>`).join('') +
+      q.options.map((o, oi) => `<button class="option" data-quiz="${key}" data-qn="${qi}" data-correct="${o.correct}" onclick="quizSelect(this,'${key}')"><span class="o-key">${'ABCD'[oi]}</span>${esc(o.text)}</button>`).join('') +
       `</div></div>`;
   });
+  html += `<div class="quiz-submit"><button class="btn gold" onclick="submitQuiz('${key}')">📤 提交答卷</button></div>`;
   wrap.innerHTML = html;
 };
-window.quizAnswer = function (el, key) {
+window.quizSelect = function (el, key) {
   const qn = el.dataset.qn;
-  const correct = el.dataset.correct === 'true';
   const group = document.querySelectorAll(`.option[data-quiz="${key}"][data-qn="${qn}"]`);
-  group.forEach(o => o.disabled = true);
-  if (correct) {
-    el.classList.add('correct');
-    quizRun[key] = (quizRun[key] || 0) + 1;
-    toast('🎉 答对了！');
-  } else {
-    el.classList.add('wrong');
-    const correctEl = Array.from(group).find(o => o.dataset.correct === 'true');
-    if (correctEl) correctEl.classList.add('correct');
-    toast('🤔 答错了，正确答案已标出');
-  }
+  group.forEach(o => { o.classList.remove('selected'); o.disabled = false; });
+  el.classList.add('selected');
+};
+window.submitQuiz = function (key) {
   const wrap = document.getElementById('quiz-wrap-' + key);
-  if (wrap) {
-    const answered = wrap.querySelectorAll('.option[data-quiz="' + key + '"]:disabled').length;
-    const total = wrap.querySelectorAll('.option[data-quiz="' + key + '"]').length;
-    if (answered >= total) {
-      const score = quizRun[key] || 0;
-      if (score > (store.quiz[key] || 0)) { store.quiz[key] = score; saveStore(); }
-      const qCount = wrap.querySelectorAll('.quiz-q').length;
-      wrap.insertAdjacentHTML('beforeend', `<div class="quiz-result">
-        <div class="qr-emoji">${score === qCount ? '🌟' : (score >= qCount / 2 ? '👍' : '💪')}</div>
-        <b>挑战完成！得分 ${score} / ${qCount}</b>
-        <p>${score === qCount ? '满分！你对本章了如指掌！' : (score >= qCount / 2 ? '不错，继续加油！' : '再挑战一次，会更好！')}</p>
-        <button class="btn gold sm" onclick="startChapterQuiz('${key}')">🔄 再来一次</button>
-      </div>`);
-      toast('🏁 挑战完成');
+  if (!wrap) return;
+  const qs = wrap.querySelectorAll('.quiz-q');
+  let score = 0, wrong = 0, unanswered = 0;
+  const total = qs.length;
+  qs.forEach(q => {
+    const group = q.querySelectorAll('.option[data-quiz="' + key + '"]');
+    group.forEach(o => o.disabled = true);
+    const sel = q.querySelector('.option.selected');
+    if (sel) {
+      if (sel.dataset.correct === 'true') { sel.classList.add('correct'); score++; }
+      else {
+        sel.classList.add('wrong'); wrong++;
+        const c = q.querySelector('.option[data-correct="true"]'); if (c) c.classList.add('correct');
+      }
+    } else {
+      unanswered++;
+      const c = q.querySelector('.option[data-correct="true"]'); if (c) c.classList.add('correct');
     }
-  }
+  });
+  if (score > (store.quiz[key] || 0)) { store.quiz[key] = score; saveStore(); }
+  const msg = score === total ? '🌟 满分！你对本章了如指掌！' : (score >= Math.ceil(total * 0.6) ? '👍 不错，继续加油！' : '💪 再挑战一次，会更好！');
+  const result = `<div class="quiz-result">
+    <div class="qr-emoji">${score === total ? '🌟' : (score >= Math.ceil(total * 0.6) ? '👍' : '💪')}</div>
+    <b>评分：${score} / ${total}</b>
+    <p>✅ 答对 ${score} 题 · ❌ 答错 ${wrong} 题${unanswered ? ' · ⭕ 未答 ' + unanswered + ' 题' : ''}</p>
+    <p>${msg}</p>
+    <div class="qr-btns">
+      <button class="btn gold sm" onclick="startChapterQuiz('${key}')">🔀 再挑战一次（换一批）</button>
+    </div>
+  </div>`;
+  const submitBtn = wrap.querySelector('.quiz-submit');
+  if (submitBtn) submitBtn.outerHTML = result;
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast('📤 已提交，得分 ' + score + '/' + total);
 };
 
 /* ---------- 阅读经文（在线和合本简体） ---------- */
