@@ -490,3 +490,19 @@ input, textarea { font-family: inherit; }
   }
   .chapter-jump .cj-links::-webkit-scrollbar { display: none; }
 }
+
+/* ============ 背景轻音乐悬浮按钮 ============ */
+.music-fab {
+  position: fixed; right: 18px; bottom: 20px; z-index: 90;
+  width: 54px; height: 54px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #c9a24b, #b38736); color: #fff;
+  font-size: 24px; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(31, 36, 48, 0.28);
+  transition: transform .15s, box-shadow .2s;
+}
+.music-fab:hover { transform: scale(1.08); }
+.music-fab.on { animation: musicPulse 2s ease-in-out infinite; }
+@keyframes musicPulse {
+  0%, 100% { box-shadow: 0 8px 24px rgba(201, 162, 75, 0.35); }
+  50% { box-shadow: 0 8px 32px rgba(201, 162, 75, 0.65); }
+}

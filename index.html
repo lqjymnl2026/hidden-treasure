@@ -104,6 +104,10 @@
             .start-btn { font-size: 16px; padding: 15px 28px; width: 100%; }
             .start-btn.ghost { font-size: 15px; padding: 13px 24px; }
         }
+            .music-fab{position:fixed;right:16px;bottom:18px;z-index:99;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,#ffd700,#ffA500);color:#1a1a2e;font-size:24px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:transform .15s;}
+        .music-fab:hover{transform:scale(1.08);}
+        .music-fab.on{animation:fabPulse 2s ease-in-out infinite;}
+        @keyframes fabPulse{0%,100%{box-shadow:0 8px 24px rgba(255,215,0,.35);}50%{box-shadow:0 8px 32px rgba(255,215,0,.7);}}
     </style>
 </head>
 <body>
@@ -121,5 +125,11 @@
             <cite>— 马太福音 13:44</cite>
         </div>
     </div>
-</body>
+<audio id="bgMusic" src="music/light-ambient.wav" loop preload="none"></audio>
+    <button class="music-fab" id="bgMusicBtn" onclick="toggleBgMusic()" title="背景轻音乐">🎵</button>
+    <script>
+    function toggleBgMusic(){var a=document.getElementById('bgMusic'),b=document.getElementById('bgMusicBtn');if(!a)return;if(a.paused){a.volume=.45;a.play().then(function(){b.classList.add('on');try{localStorage.setItem('yiqi-music','on');}catch(e){}}).catch(function(){alert('无法播放音乐');});}else{a.pause();b.classList.remove('on');try{localStorage.setItem('yiqi-music','off');}catch(e){}}}
+    (function(){var a=document.getElementById('bgMusic'),b=document.getElementById('bgMusicBtn');if(!a||!b)return;try{if(localStorage.getItem('yiqi-music')==='on'){a.volume=.45;a.play().catch(function(){});b.classList.add('on');}}catch(e){}})();
+    </script>
+  </body>
 </html>

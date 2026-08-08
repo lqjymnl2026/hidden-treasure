@@ -420,6 +420,7 @@ function renderChapter(app, bookId, num) {
 
     <div class="steps">
       ${lesson ? renderCuratedSteps(b, num, lesson, note, done) : renderGenericSteps(b, num, title, note, done)}
+      ${recorderSection(chKey(b.id, num))}
     </div>
 
     ${done ? `<div class="complete-card" style="margin-top:30px">
@@ -433,6 +434,7 @@ function renderChapter(app, bookId, num) {
       </div>
     </div>` : ''}
   </div>`;
+  try { initRecorder(qKey); } catch (e) {}
 }
 
 function renderChapterJump(bookId, num) {
@@ -447,6 +449,174 @@ function renderChapterJump(bookId, num) {
     <div class="cj-links">${items}</div>
   </div>`;
 }
+
+/* ---------- 我的祷告录音 ---------- */
+const REC_DB = 'yiqi-prayer-rec-v1';
+const recStreams = {}, recRecorders = {}, recChunks = {}, recTimers = {}, recSecs = {}, recBlobs = {};
+
+function recorderSection(qKey) {
+  return `
+  <!-- ⑧ 我的祷告录音 -->
+  <section class="step" data-step="8">
+    <div class="step-head"><span class="step-badge gold-badge">⑧</span><div class="step-title"><h3>我的祷告录音</h3><p>把今天的祷告录下来，可以回放，也可以导出保存到手机或电脑</p></div></div>
+    <div class="step-body">
+      <div class="rec-box">
+        <div class="rec-timer" id="rec-timer-${qKey}">00:00</div>
+        <div class="rec-status" id="rec-status-${qKey}">🎙️ 点击「开始录音」，向神倾心吐意</div>
+        <div class="rec-controls">
+          <button class="btn gold sm" id="rec-start-${qKey}" onclick="startRecord('${qKey}')">🎙️ 开始录音</button>
+          <button class="btn ghost sm" id="rec-stop-${qKey}" onclick="stopRecord('${qKey}')" style="display:none">⏹ 停止录音</button>
+          <button class="btn ghost sm" id="rec-play-${qKey}" onclick="playRecording('${qKey}')" style="display:none">▶️ 播放</button>
+          <button class="btn ghost sm" id="rec-export-${qKey}" onclick="exportRecording('${qKey}')" style="display:none">📥 导出到设备</button>
+          <button class="btn ghost sm" id="rec-del-${qKey}" onclick="deleteRecording('${qKey}')" style="display:none">🗑 删除</button>
+        </div>
+        <audio id="rec-audio-${qKey}" controls style="display:none;width:100%;margin-top:12px"></audio>
+        <div class="rec-note">🔒 录音只保存在你自己的设备上（浏览器本地），可随时导出；删除后无法找回。</div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function recDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(REC_DB, 1);
+    req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains('recs')) req.result.createObjectStore('recs', { keyPath: 'key' }); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function recSave(key, blob, duration) {
+  const db = await recDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('recs', 'readwrite');
+    tx.objectStore('recs').put({ key, blob, duration, date: todayStr() });
+    tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+  });
+}
+async function recLoad(key) {
+  const db = await recDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('recs', 'readonly');
+    const rq = tx.objectStore('recs').get(key);
+    rq.onsuccess = () => resolve(rq.result || null); rq.onerror = () => reject(rq.error);
+  });
+}
+async function recDelete(key) {
+  const db = await recDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('recs', 'readwrite');
+    tx.objectStore('recs').delete(key);
+    tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+  });
+}
+function recPickMime() {
+  if (!window.MediaRecorder) return '';
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+  for (const t of types) if (MediaRecorder.isTypeSupported(t)) return t;
+  return '';
+}
+function recExt(mime) { return mime.indexOf('mp4') >= 0 ? 'm4a' : (mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm'); }
+function recFmtSec(s) { s = Math.max(0, Math.floor(s || 0)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function recFileName(key, mime) {
+  const parts = key.split('.');
+  const b = getBook(parts[0]);
+  const nm = (b ? b.name : parts[0]) + '第' + parts[1] + '章';
+  return '隐藏的珍宝-祷告录音-' + nm + '-' + todayStr() + '.' + recExt(mime || '');
+}
+function recStopStream(key) { if (recStreams[key]) { recStreams[key].getTracks().forEach(t => t.stop()); recStreams[key] = null; } }
+window.startRecord = async function (key) {
+  const st = document.getElementById('rec-status-' + key);
+  const startBtn = document.getElementById('rec-start-' + key);
+  const stopBtn = document.getElementById('rec-stop-' + key);
+  const timerEl = document.getElementById('rec-timer-' + key);
+  if (!st || !startBtn || !stopBtn) return;
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      st.textContent = '⚠️ 你的浏览器不支持录音，请用最新版 Chrome / Safari 访问（需 HTTPS）';
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = recPickMime();
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recStreams[key] = stream; recRecorders[key] = rec; recChunks[key] = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) recChunks[key].push(e.data); };
+    rec.onstop = async () => {
+      const blob = new Blob(recChunks[key], { type: mime || 'audio/webm' });
+      const dur = recSecs[key] || 0;
+      try { await recSave(key, blob, dur); } catch (e) {}
+      recBlobs[key] = blob;
+      if (recTimers[key]) { clearInterval(recTimers[key]); recTimers[key] = null; }
+      recStopStream(key);
+      showRecorderResult(key, blob, dur, false);
+    };
+    rec.start();
+    startBtn.style.display = 'none'; stopBtn.style.display = '';
+    st.textContent = '🔴 正在录音… 祷告结束后点「停止录音」';
+    recSecs[key] = 0; if (timerEl) timerEl.textContent = '00:00';
+    recTimers[key] = setInterval(() => { recSecs[key]++; if (timerEl) timerEl.textContent = recFmtSec(recSecs[key]); }, 1000);
+  } catch (e) {
+    st.textContent = '⚠️ 无法使用麦克风：' + (e && e.message ? e.message : '请允许麦克风权限后重试');
+  }
+};
+window.stopRecord = function (key) { if (recRecorders[key]) recRecorders[key].stop(); };
+function showRecorderResult(key, blob, duration, fromSaved) {
+  const st = document.getElementById('rec-status-' + key);
+  const startBtn = document.getElementById('rec-start-' + key);
+  const stopBtn = document.getElementById('rec-stop-' + key);
+  const playBtn = document.getElementById('rec-play-' + key);
+  const expBtn = document.getElementById('rec-export-' + key);
+  const delBtn = document.getElementById('rec-del-' + key);
+  const audio = document.getElementById('rec-audio-' + key);
+  const timerEl = document.getElementById('rec-timer-' + key);
+  if (startBtn) startBtn.style.display = 'none';
+  if (stopBtn) stopBtn.style.display = 'none';
+  if (playBtn) playBtn.style.display = '';
+  if (expBtn) expBtn.style.display = '';
+  if (delBtn) delBtn.style.display = '';
+  if (audio) { audio.style.display = 'block'; audio.src = URL.createObjectURL(blob); }
+  if (timerEl) timerEl.textContent = recFmtSec(duration);
+  if (st) st.textContent = fromSaved ? '📼 已有录音（' + recFmtSec(duration) + '），可播放或导出保存' : '✅ 录音完成（' + recFmtSec(duration) + '），可播放或导出保存';
+  recBlobs[key] = blob;
+}
+window.playRecording = function (key) { const a = document.getElementById('rec-audio-' + key); if (a) a.play(); };
+window.exportRecording = async function (key) {
+  let blob = recBlobs[key];
+  if (!blob) { try { const saved = await recLoad(key); if (saved) blob = saved.blob; } catch (e) {} }
+  if (!blob) { toast('还没有可导出的录音'); return; }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = recFileName(key, blob.type);
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 900);
+  toast('📥 已开始导出，请到「下载/文件」中查看保存');
+};
+window.deleteRecording = async function (key) {
+  if (!confirm('确定删除这段祷告录音吗？删除后无法恢复。')) return;
+  try { await recDelete(key); } catch (e) {}
+  delete recBlobs[key];
+  const st = document.getElementById('rec-status-' + key);
+  const startBtn = document.getElementById('rec-start-' + key);
+  const playBtn = document.getElementById('rec-play-' + key);
+  const expBtn = document.getElementById('rec-export-' + key);
+  const delBtn = document.getElementById('rec-del-' + key);
+  const audio = document.getElementById('rec-audio-' + key);
+  const timerEl = document.getElementById('rec-timer-' + key);
+  if (st) st.textContent = '🎙️ 点击「开始录音」，向神倾心吐意';
+  if (startBtn) startBtn.style.display = '';
+  if (playBtn) playBtn.style.display = 'none';
+  if (expBtn) expBtn.style.display = 'none';
+  if (delBtn) delBtn.style.display = 'none';
+  if (audio) { audio.style.display = 'none'; audio.src = ''; }
+  if (timerEl) timerEl.textContent = '00:00';
+  toast('🗑 录音已删除');
+};
+async function initRecorder(key) {
+  try {
+    const saved = await recLoad(key);
+    if (saved) showRecorderResult(key, saved.blob, saved.duration || 0, true);
+  } catch (e) {}
+}
+if (window.addEventListener) window.addEventListener('pagehide', () => { Object.keys(recStreams).forEach(k => recStopStream(k)); });
 
 /* 精选章节：完整七步 */
 function renderCuratedSteps(b, num, lesson, note, done) {
@@ -1099,6 +1269,38 @@ function renderFooter() {
   </footer>`;
 }
 
+/* ---------- 背景轻音乐 ---------- */
+window.toggleBgMusic = function () {
+  const a = document.getElementById('bgMusic');
+  const btn = document.getElementById('bgMusicBtn');
+  if (!a) return;
+  if (a.paused) {
+    a.volume = 0.45;
+    a.play().then(() => {
+      try { localStorage.setItem('yiqi-music', 'on'); } catch (e) {}
+      if (btn) btn.classList.add('on');
+      toast('🎵 轻音乐已开启');
+    }).catch(() => { toast('⚠️ 无法播放音乐，请检查音频文件'); });
+  } else {
+    a.pause();
+    try { localStorage.setItem('yiqi-music', 'off'); } catch (e) {}
+    if (btn) btn.classList.remove('on');
+    toast('🎵 轻音乐已暂停');
+  }
+};
+function initBgMusic() {
+  const a = document.getElementById('bgMusic');
+  const btn = document.getElementById('bgMusicBtn');
+  if (!a || !btn) return;
+  try {
+    if (localStorage.getItem('yiqi-music') === 'on') {
+      a.volume = 0.45;
+      a.play().catch(() => {});
+      btn.classList.add('on');
+    }
+  } catch (e) {}
+}
+
 /* ---------- 启动 ---------- */
 function init() {
   document.getElementById('app').innerHTML = '';
@@ -1106,5 +1308,6 @@ function init() {
   render();
   const footer = document.getElementById('site-footer');
   if (footer) footer.innerHTML = renderFooter();
+  initBgMusic();
 }
 document.addEventListener('DOMContentLoaded', init);
