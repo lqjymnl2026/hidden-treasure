@@ -416,6 +416,8 @@ function renderChapter(app, bookId, num) {
       ${next ? `<a class="ln-next" href="#/chapter/${b.id}/${next}">下一章 · ${chapterTitle(b.id, next)} →</a>` : '<span class="ln-next disabled">已是最后一章 →</span>'}
     </nav>
 
+    ${renderChapterJump(b.id, num)}
+
     <div class="steps">
       ${lesson ? renderCuratedSteps(b, num, lesson, note, done) : renderGenericSteps(b, num, title, note, done)}
     </div>
@@ -430,6 +432,19 @@ function renderChapter(app, bookId, num) {
         <button class="btn ghost" onclick="openReport('${b.id}', ${num})">📄 查经报告</button>
       </div>
     </div>` : ''}
+  </div>`;
+}
+
+function renderChapterJump(bookId, num) {
+  const b = getBook(bookId);
+  let items = '';
+  for (let i = 1; i <= b.chapters; i++) {
+    const cls = i === num ? 'current' : (isDone(bookId, i) ? 'done' : '');
+    items += `<a class="cj-item ${cls}" href="#/chapter/${bookId}/${i}" title="第${i}章 · ${chapterTitle(bookId, i)}">${i}</a>`;
+  }
+  return `<div class="chapter-jump">
+    <span class="cj-label">📑 章节</span>
+    <div class="cj-links">${items}</div>
   </div>`;
 }
 

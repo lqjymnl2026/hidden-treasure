@@ -458,3 +458,35 @@ input, textarea { font-family: inherit; }
   .bm-item { padding: 9px 10px; }
   .bm-item b { font-size: 14px; }
 }
+
+/* ============ 章节快捷跳转 ============ */
+.chapter-jump {
+  margin: 16px 0 4px;
+  display: flex; align-items: center; gap: 12px;
+}
+.chapter-jump .cj-label {
+  font-size: 13px; font-weight: 800; color: var(--gold-deep);
+  flex: 0 0 auto; white-space: nowrap;
+}
+.chapter-jump .cj-links {
+  flex: 1; min-width: 0;
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.cj-item {
+  min-width: 34px; height: 34px; padding: 0 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; border: 1.5px solid var(--line); background: #fff;
+  font-size: 13px; font-weight: 700; color: var(--ink-soft); text-decoration: none;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.cj-item:hover { border-color: var(--gold); color: var(--gold-deep); }
+.cj-item.current { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+.cj-item.done { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+@media (max-width: 720px) {
+  .chapter-jump { align-items: flex-start; }
+  .chapter-jump .cj-links {
+    flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .chapter-jump .cj-links::-webkit-scrollbar { display: none; }
+}
