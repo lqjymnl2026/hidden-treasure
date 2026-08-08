@@ -98,6 +98,8 @@ function render() {
     if (el) el.classList.add('active');
   }
   const app = document.getElementById('app');
+  const navLinksEl = document.querySelector('.nav-links');
+  if (navLinksEl) navLinksEl.classList.remove('open');
   window.scrollTo(0, 0);
   switch (path) {
     case 'home': return renderHome(app);
@@ -1582,7 +1584,9 @@ window.quizAnswer = function (el, key) {
     toast('🎉 答对了！');
   } else {
     el.classList.add('wrong');
-    toast('🤔 答错了，再想想');
+    const correctEl = Array.from(group).find(o => o.dataset.correct === 'true');
+    if (correctEl) correctEl.classList.add('correct');
+    toast('🤔 答错了，正确答案已标出');
   }
   const wrap = document.getElementById('quiz-wrap-' + key);
   if (wrap) {
