@@ -462,6 +462,7 @@ function renderChapterJump(bookId, num) {
 /* ---------- 我的祷告录音 ---------- */
 const REC_DB = 'yiqi-prayer-rec-v1';
 const recStreams = {}, recRecorders = {}, recChunks = {}, recTimers = {}, recSecs = {}, recBlobs = {};
+let recPausedBg = false;
 
 function recorderSection(qKey) {
   return `
@@ -554,14 +555,17 @@ window.startRecord = async function (key) {
       const dur = recSecs[key] || 0;
       try { await recSave(key, blob, dur); } catch (e) {}
       store.counters = store.counters || {}; store.counters.recordings = (store.counters.recordings || 0) + 1; saveStore();
+      if (recPausedBg) { recPausedBg = false; const bg2 = document.getElementById('bgMusic'); if (bg2) bg2.play().catch(() => {}); }
       recBlobs[key] = blob;
       if (recTimers[key]) { clearInterval(recTimers[key]); recTimers[key] = null; }
       recStopStream(key);
       showRecorderResult(key, blob, dur, false);
     };
+    const bg = document.getElementById('bgMusic');
+    if (bg && !bg.paused) { recPausedBg = true; bg.pause(); }
     rec.start();
     startBtn.style.display = 'none'; stopBtn.style.display = '';
-    st.textContent = '🔴 正在录音… 祷告结束后点「停止录音」';
+    st.textContent = recPausedBg ? '🔴 正在录音…（背景音乐已自动暂停）祷告结束后点「停止录音」' : '🔴 正在录音… 祷告结束后点「停止录音」';
     recSecs[key] = 0; if (timerEl) timerEl.textContent = '00:00';
     recTimers[key] = setInterval(() => { recSecs[key]++; if (timerEl) timerEl.textContent = recFmtSec(recSecs[key]); }, 1000);
   } catch (e) {
