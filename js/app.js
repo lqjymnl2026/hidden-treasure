@@ -10,7 +10,10 @@ const store = {
   notes: {},       // 'genesis.1' -> { discussion: '...', application: '...' }
   minutes: 0,
   counters: {},     // { recordings: n, reports: n }
-  quiz: {}          // 'book.ch' -> 最佳挑战得分
+  quiz: {},         // 'book.ch' -> 最佳挑战得分
+  points: 0,        // 我的珍宝值
+  reading: {},      // 'book.ch' -> { times, last, first }
+  footprints: []    // 足迹记录
 };
 function loadStore() {
   try {
@@ -47,6 +50,27 @@ function fmtMinutes(m) {
   if (h === 0) return mm + '分钟';
   return h + '小时' + (mm ? mm + '分钟' : '');
 }
+function recordActivity(type, key, pts) {
+  try {
+    store.points = (store.points || 0) + (pts || 0);
+    const now = new Date();
+    const date = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    store.footprints = store.footprints || [];
+    store.footprints.unshift({ t: type, k: key, d: date, tm: time });
+    if (store.footprints.length > 300) store.footprints.length = 300;
+    if (type === 'read') {
+      store.reading = store.reading || {};
+      const r = store.reading[key] || { times: 0, last: '', first: '' };
+      r.times = (r.times || 0) + 1;
+      r.last = date + ' ' + time;
+      if (!r.first) r.first = date;
+      store.reading[key] = r;
+    }
+    saveStore();
+  } catch (e) {}
+}
+
 function streakDays() {
   const dates = Object.values(store.completed).map(c => c.date).filter(Boolean).sort();
   const uniq = [...new Set(dates)];
@@ -449,6 +473,7 @@ function renderChapter(app, bookId, num) {
   </div>`;
   try { initRecorder(qKey); } catch (e) {}
   try { loadChapterText(chKey(b.id, num)); } catch (e) {}
+  try { recordActivity('read', chKey(b.id, num), 10); } catch (e) {}
 }
 
 function renderChapterJump(bookId, num) {
@@ -560,6 +585,7 @@ window.startRecord = async function (key) {
       const dur = recSecs[key] || 0;
       try { await recSave(key, blob, dur); } catch (e) {}
       store.counters = store.counters || {}; store.counters.recordings = (store.counters.recordings || 0) + 1; saveStore();
+      recordActivity('record', key, 20);
       if (recPausedBg) { recPausedBg = false; const bg2 = document.getElementById('bgMusic'); if (bg2) bg2.play().catch(() => {}); }
       recBlobs[key] = blob;
       if (recTimers[key]) { clearInterval(recTimers[key]); recTimers[key] = null; }
@@ -961,6 +987,7 @@ function buildChapterReportDoc(bookId, num) {
 }
 window.downloadChapterReport = function (bookId, num) {
   store.counters = store.counters || {}; store.counters.reports = (store.counters.reports || 0) + 1; saveStore();
+  recordActivity('report', bookId + '.' + num, 10);
   const html = buildChapterReportDoc(bookId, num);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
@@ -973,6 +1000,7 @@ window.downloadChapterReport = function (bookId, num) {
 };
 window.openReport = function (bookId, num) {
   store.counters = store.counters || {}; store.counters.reports = (store.counters.reports || 0) + 1; saveStore();
+  recordActivity('report', bookId + '.' + num, 10);
   const html = buildChapterReportDoc(bookId, num);
   const w = window.open('', '_blank');
   if (!w) { toast('浏览器拦截了弹窗，请允许弹出窗口后重试'); return; }
@@ -1023,6 +1051,7 @@ window.pickOpening = function (el, key) {
   if (fb) fb.classList.add('show');
 };
 window.markRead = function (btn, key) {
+  recordActivity('readdone', key, 5);
   btn.textContent = '✓ 已读';
   btn.disabled = true;
   btn.style.opacity = '.6';
@@ -1056,6 +1085,7 @@ window.saveNote = function (key, field, taId) {
   store.notes[key] = store.notes[key] || {};
   store.notes[key][field] = ta.value;
   saveStore();
+  recordActivity('note', key, 2);
   const saved = document.getElementById('saved-' + field + '-' + key);
   if (saved) {
     saved.classList.add('show');
@@ -1068,6 +1098,7 @@ window.completeChapter = function (key, minutes) {
   const existing = store.completed[key];
   store.completed[key] = { date: today, minutes: minutes || 10, completedAt: existing ? existing.completedAt : Date.now() };
   saveStore();
+  recordActivity('complete', key, 30);
   toast('🎉 本章学习完成！');
   setTimeout(() => location.reload(), 700);
 };
@@ -1200,6 +1231,7 @@ function renderProgress(app) {
       <div class="card stat-card"><div class="sc-emoji">📖</div><b>${done}</b><span>已学习 / 1189章</span></div>
       <div class="card stat-card"><div class="sc-emoji">⏱</div><b>${fmtMinutes(totalMinutes())}</b><span>累计学习时间</span></div>
       <div class="card stat-card"><div class="sc-emoji">🔥</div><b>${streakDays()}</b><span>连续学习 / 天</span></div>
+      <div class="card stat-card"><div class="sc-emoji">💎</div><b>${store.points || 0}</b><span>我的珍宝值</span></div>
     </div>
     <div class="section">
       <div class="section-head"><h2>💎 今日珍宝</h2><span class="sub">每天一节经文，默想后可生成分享卡</span></div>
@@ -1212,6 +1244,10 @@ function renderProgress(app) {
     <div class="section">
       <div class="section-head"><h2>🗓️ 灵修打卡日历</h2><span class="sub">近 180 天学习记录</span></div>
       <div class="card" style="padding:22px">${renderStudyCalendar()}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h2>👣 我的足迹</h2><span class="sub">记录你读过的每一章、做过的每一件事</span></div>
+      <div class="card" style="padding:22px">${renderFootprints()}</div>
     </div>
     <div class="journey-map">
       <div class="section-head"><h2>📈 整体进度</h2><span class="sub">${done} / 1189 章 · ${pct.toFixed(1)}%</span></div>
@@ -1624,6 +1660,7 @@ window.submitQuiz = function (key) {
     }
   });
   if (score > (store.quiz[key] || 0)) { store.quiz[key] = score; saveStore(); }
+  recordActivity('quiz', key, score * 2);
   const msg = score === total ? '🌟 满分！你对本章了如指掌！' : (score >= Math.ceil(total * 0.6) ? '👍 不错，继续加油！' : '💪 再挑战一次，会更好！');
   const result = `<div class="quiz-result">
     <div class="qr-emoji">${score === total ? '🌟' : (score >= Math.ceil(total * 0.6) ? '👍' : '💪')}</div>
@@ -1679,6 +1716,24 @@ async function loadChapterText(key) {
       '<button class="btn ghost sm" onclick="loadChapterText(\'' + key + '\')">🔄 重试</button> ' +
       '<a class="btn ghost sm" target="_blank" rel="noopener" href="' + link + '">🔗 在线阅读</a></div>';
   }
+}
+
+function renderFootprints() {
+  const list = store.footprints || [];
+  if (!list.length) return '<div style="color:var(--muted);text-align:center;padding:24px 0">👣 还没有足迹，去读一章吧！</div>';
+  const emoji = { read: '📖', readdone: '✅', complete: '🎉', note: '✍️', record: '🎙️', report: '📄', quiz: '🧠' };
+  const label = { read: '阅读本章', readdone: '读完本章', complete: '完成本章', note: '写下笔记', record: '祷告录音', report: '生成报告', quiz: '答题挑战' };
+  const rows = list.slice(0, 30).map(f => {
+    const parts = f.k.split('.');
+    const num = parseInt(parts[1], 10);
+    const b = getBook(parts[0]);
+    const lesson = getLesson(parts[0], num);
+    const title = lesson ? lesson.title : chapterTitle(parts[0], num);
+    return `<div class="foot-row"><span class="foot-emoji">${emoji[f.t] || '📌'}</span>
+      <div class="foot-info"><b>${label[f.t] || f.t} · ${b ? esc(b.name) + ' 第' + num + '章' : esc(f.k)}</b><span>${esc(title)}</span></div>
+      <span class="foot-date">${f.d} ${f.tm || ''}</span></div>`;
+  }).join('');
+  return `<div class="foot-list">${rows}</div><div class="foot-count">共 ${list.length} 条足迹 · 记录自动保存在本机</div>`;
 }
 
 /* ---------- 背景轻音乐 ---------- *//* ---------- 背景轻音乐 ---------- */

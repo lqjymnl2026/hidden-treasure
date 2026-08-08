@@ -602,3 +602,14 @@ input, textarea { font-family: inherit; }
 .quiz-tip { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
 .quiz-submit { text-align: center; margin-top: 10px; }
 .qr-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+
+/* ============ 我的足迹 ============ */
+.foot-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.foot-row { display: flex; align-items: center; gap: 12px; background: #fbf8f0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.foot-emoji { font-size: 22px; width: 30px; text-align: center; flex: 0 0 auto; }
+.foot-info { flex: 1; min-width: 0; }
+.foot-info b { display: block; font-size: 14px; }
+.foot-info span { font-size: 12.5px; color: var(--muted); }
+.foot-date { flex: 0 0 auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.foot-count { margin-top: 12px; font-size: 12.5px; color: var(--muted); text-align: center; }
+@media (max-width: 560px) { .foot-date { display: none; } }
