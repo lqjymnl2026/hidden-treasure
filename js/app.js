@@ -166,7 +166,7 @@ function renderHome(app) {
       <div class="card" style="padding:26px">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
           <span style="font-weight:800">已完成 ${done} / 1189 章</span>
-          <span style="color:var(--muted);font-size:13px">${booksCompleted()} / 66 卷 · 累计 ${fmtMinutes(totalMinutes())}</span>
+          <span style="color:var(--muted);font-size:16px">${booksCompleted()} / 66 卷 · 累计 ${fmtMinutes(totalMinutes())}</span>
         </div>
         <div class="progress-track"><i style="width:${(done / 1189 * 100).toFixed(2)}%"></i></div>
         <a class="btn gold" href="#/${continueTarget}" style="margin-top:18px">${continueLabel} →</a>
@@ -286,7 +286,7 @@ function renderAllBooksGrid() {
 function renderBooks(app) {
   app.innerHTML = `
   <div class="container" style="padding-top:40px">
-    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:30px">📚 全圣经 · 66卷</h1></div>
+    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:33px">📚 全圣经 · 66卷</h1></div>
     <p style="color:var(--muted);margin-bottom:6px">旧约 39 卷 · 新约 27 卷 · 从律法书到启示录。点开任何一卷，进入它的学习世界。</p>
     ${renderBibleNavFull()}
   </div>`;
@@ -357,7 +357,7 @@ function renderBook(app, bookId) {
           </div>
         </div>
         <div class="card" style="padding:20px;margin-top:16px">
-          <h3 style="font-size:15px;margin-bottom:8px">相关主题</h3>
+          <h3 style="font-size:18px;margin-bottom:8px">相关主题</h3>
           ${relatedThemes(b.id)}
         </div>
       </aside>
@@ -371,7 +371,7 @@ function firstIncompleteInBook(bookId) {
 }
 function relatedThemes(bookId) {
   const rel = THEMES.filter(th => th.books.some(x => x.book === bookId)).slice(0, 5);
-  if (!rel.length) return '<p style="font-size:13px;color:var(--muted)">暂无相关主题</p>';
+  if (!rel.length) return '<p style="font-size:16px;color:var(--muted)">暂无相关主题</p>';
   return '<div style="display:flex;flex-wrap:wrap;gap:8px">' + rel.map(t =>
     `<a class="chip" href="#/theme/${t.id}" style="background:var(--cream);border:1px solid var(--line);color:var(--indigo-deep)">${t.emoji} ${t.name}</a>`).join('') + '</div>';
 }
@@ -853,29 +853,29 @@ function reportDoc(title, inner, filename) {
 *{box-sizing:border-box;}
 body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;color:var(--ink);background:var(--paper);margin:0;padding:0 16px 56px;}
 .toolbar{position:sticky;top:0;z-index:20;background:rgba(255,253,248,.96);border-bottom:1px solid var(--line);padding:12px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.t-title{font-weight:800;color:#7a5b1e;margin-right:auto;font-size:14px;}
-.btn{border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;}
+.t-title{font-weight:800;color:#7a5b1e;margin-right:auto;font-size:17px;}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-size:17px;font-weight:700;cursor:pointer;}
 .btn.gold{background:linear-gradient(135deg,#c9a24b,#b38736);color:#fff;}
 .btn.ghost{background:#fff;border:1.5px solid #c9a24b;color:#7a5b1e;}
 .report{max-width:720px;margin:0 auto;}
 .report-head{text-align:center;padding:36px 0 6px;}
-.report-head .logo{font-size:40px;}
-.report-head h1{font-size:26px;margin:8px 0 4px;color:#1f2430;}
-.report-head .sub{color:var(--muted);font-size:14px;font-weight:600;}
+.report-head .logo{font-size:43px;}
+.report-head h1{font-size:29px;margin:8px 0 4px;color:#1f2430;}
+.report-head .sub{color:var(--muted);font-size:17px;font-weight:600;}
 .meta-box{background:#f7f1e2;border:1px solid #ece0c2;border-radius:14px;padding:18px 20px;margin:20px 0;display:flex;flex-wrap:wrap;gap:8px 30px;}
-.mi b{display:block;font-size:12px;color:var(--muted);font-weight:600;}
-.mi span{font-size:15px;font-weight:700;}
-.memory{background:#eef3fb;border-left:5px solid var(--blue);border-radius:10px;padding:14px 18px;font-style:italic;font-family:"Songti SC","STSong",serif;font-size:15px;color:#2c3860;margin:0 0 26px;}
-.note-h{font-size:18px;color:#7a5b1e;margin:0 0 16px;}
+.mi b{display:block;font-size:15px;color:var(--muted);font-weight:600;}
+.mi span{font-size:18px;font-weight:700;}
+.memory{background:#eef3fb;border-left:5px solid var(--blue);border-radius:10px;padding:14px 18px;font-style:italic;font-family:"Songti SC","STSong",serif;font-size:18px;color:#2c3860;margin:0 0 26px;}
+.note-h{font-size:21px;color:#7a5b1e;margin:0 0 16px;}
 .chapter{background:#fbf7ee;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px;page-break-inside:avoid;}
-.ch-title{font-size:17px;color:#2c3860;border-bottom:2px solid var(--line);padding-bottom:8px;margin:0 0 14px;}
-.ch-date{font-size:12px;color:var(--muted);font-weight:400;}
+.ch-title{font-size:20px;color:#2c3860;border-bottom:2px solid var(--line);padding-bottom:8px;margin:0 0 14px;}
+.ch-date{font-size:15px;color:var(--muted);font-weight:400;}
 .sec{margin-bottom:20px;}
-.sec h2{font-size:14px;color:#7a5b1e;margin:0 0 4px;}
+.sec h2{font-size:17px;color:#7a5b1e;margin:0 0 4px;}
 .sec .q{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.6;}
-.sec .a{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;line-height:1.8;white-space:pre-wrap;}
+.sec .a{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:18px;line-height:1.8;white-space:pre-wrap;}
 .sec .a.empty{color:#c0b9a8;}
-.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:36px;padding-top:16px;border-top:1px solid var(--line);}
+.foot{text-align:center;color:var(--muted);font-size:15px;margin-top:36px;padding-top:16px;border-top:1px solid var(--line);}
 @media print{.toolbar{display:none}body{background:#fff;padding:0}.sec .a{border:none;padding:0}.chapter{box-shadow:none;border:1px solid #ddd}}
 </style>
 </head>
@@ -1037,7 +1037,7 @@ function renderThemeGrid(limit) {
 function renderThemes(app) {
   app.innerHTML = `
   <div class="container" style="padding-top:40px">
-    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:30px">❤️ 圣经主题地图</h1></div>
+    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:33px">❤️ 圣经主题地图</h1></div>
     <p style="color:var(--muted);max-width:720px">66卷是纵向学习，主题是横向学习。点进一个主题，看它如何贯穿整本圣经——从创世记到启示录。</p>
     ${renderThemeGrid()}
   </div>`;
@@ -1085,7 +1085,7 @@ function renderPeopleGrid(limit) {
 function renderPeople(app) {
   app.innerHTML = `
   <div class="container" style="padding-top:40px">
-    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:30px">👤 人物地图</h1></div>
+    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:33px">👤 人物地图</h1></div>
     <p style="color:var(--muted);max-width:720px">搜索一个人物，跟着他的人生轨迹查圣经——从蒙召、跌倒到成长，看见神在一个人一生中的工作。</p>
     ${renderPeopleGrid()}
   </div>`;
@@ -1145,7 +1145,7 @@ function renderProgress(app) {
   const ntRows = rows.filter((r, i) => BOOKS[i].testament === 'nt').join('');
   app.innerHTML = `
   <div class="container" style="padding-top:40px">
-    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:30px">🗺️ 我的圣经旅程</h1></div>
+    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:33px">🗺️ 我的圣经旅程</h1></div>
     <p style="color:var(--muted)">一个账号，从创世记1章开始，一直走到启示录22章。进度保存在本机浏览器。</p>
     <div class="stats-grid">
       <div class="card stat-card"><div class="sc-emoji">📚</div><b>${booksCompleted()}</b><span>已完成 / 66卷</span></div>
@@ -1211,11 +1211,11 @@ function renderModes(app) {
   const tl = '<div class="card map-card">' + timeline.map((t, i) =>
     `<div style="display:flex;gap:16px;padding:10px 0;align-items:flex-start">
       <span class="map-node" style="background:${i === timeline.length - 1 ? 'var(--gold)' : 'var(--indigo)'};border-color:${i === timeline.length - 1 ? 'var(--gold)' : 'var(--indigo)'};color:#fff">${i + 1}</span>
-      <div><b>${t[0]}</b><span style="color:var(--muted);font-size:13px">${t[1]}</span></div>
+      <div><b>${t[0]}</b><span style="color:var(--muted);font-size:16px">${t[1]}</span></div>
     </div>`).join('') + '</div>';
   app.innerHTML = `
   <div class="container" style="padding-top:40px">
-    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:30px">🧭 四种查经模式</h1></div>
+    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:33px">🧭 四种查经模式</h1></div>
     <p style="color:var(--muted);max-width:720px">同一个全圣经系统，四种进入方式：按卷（纵向系统）、按主题（横向专题）、按人物（生命轨迹）、按历史（整本圣经时间轴）。</p>
     <div class="section">${renderModesGrid()}</div>
     <div class="section">
@@ -1233,8 +1233,8 @@ function renderStart(app) {
   app.innerHTML = `
   <div class="container" style="padding-top:40px">
     <div class="card" style="padding:40px;text-align:center">
-      <div style="font-size:56px">🟢</div>
-      <h1 style="font-size:28px;margin:10px 0 6px">从头开始 · 创世记 → 启示录</h1>
+      <div style="font-size:59px">🟢</div>
+      <h1 style="font-size:31px;margin:10px 0 6px">从头开始 · 创世记 → 启示录</h1>
       <p style="color:var(--muted);max-width:560px;margin:0 auto">系统学习模式：从创世记1章开始，一卷一卷、一章一章往前走。每一章都是一次完整的互动查经：读经 → 观察 → 思考 → 回答 → 讨论 → 应用 → 祷告。</p>
       <div style="margin-top:24px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
         <a class="btn gold" href="#/${target}">${first ? '继续我的旅程 →' : '重新开始（已完成全部 🎉）'}</a>
