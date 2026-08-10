@@ -116,7 +116,7 @@ function navigate(path) { location.hash = '#/' + path; }
 function render() {
   const { path, parts } = parseHash();
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-  const navMap = { home: 'nav-home', books: 'nav-books', themes: 'nav-themes', people: 'nav-people', progress: 'nav-progress', modes: 'nav-modes' };
+  const navMap = { home: 'nav-home', books: 'nav-books', themes: 'nav-themes', people: 'nav-people', progress: 'nav-progress', modes: 'nav-modes', kids: 'nav-kids', games: 'nav-games' };
   if (navMap[path]) {
     const el = document.getElementById(navMap[path]);
     if (el) el.classList.add('active');
@@ -135,6 +135,8 @@ function render() {
     case 'person': return renderPerson(app, parts[1]);
     case 'progress': return renderProgress(app);
     case 'modes': return renderModes(app);
+    case 'kids': return renderKids(app);
+    case 'games': return renderGames(app);
     case 'start': return renderStart(app);
     default: return renderHome(app);
   }
@@ -221,6 +223,15 @@ function renderHome(app) {
         <a class="more" href="#/modes">了解更多 →</a>
       </div>
       ${renderModesGrid()}
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>🎮 趣味学习</h2>
+        <span class="sub">儿童乐园 · 金句拼拼 · 快问快答，边玩边学</span>
+        <a class="more" href="#/games">进入趣味乐园 →</a>
+      </div>
+      ${renderFunGrid()}
     </div>
 
     <div class="section">
@@ -1323,6 +1334,433 @@ function emptyPage(msg) {
   return `<div class="container"><div class="empty"><div class="e-emoji">📭</div><h3>${msg}</h3><p><a href="#/" style="color:var(--gold-deep);font-weight:700">回到首页</a></p></div></div>`;
 }
 
+/* ============================================================
+ * 🧒 儿童乐园（儿童学习版块）+ 🎮 趣味乐园（金句拼拼/快问快答）
+ * ============================================================ */
+const KIDS_STICKERS_KEY = 'yiqi-kids-stickers-v1';
+const KIDS_PROGRESS_KEY = 'yiqi-kids-progress-v1';
+function kidsStickers() {
+  try { const v = JSON.parse(localStorage.getItem(KIDS_STICKERS_KEY)); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+}
+function saveKidsStickers(list) { try { localStorage.setItem(KIDS_STICKERS_KEY, JSON.stringify(list)); } catch (e) {} }
+function kidsProgress() {
+  try { const v = JSON.parse(localStorage.getItem(KIDS_PROGRESS_KEY)); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; }
+}
+function saveKidsProgress(p) { try { localStorage.setItem(KIDS_PROGRESS_KEY, JSON.stringify(p)); } catch (e) {} }
+function addKidsSticker(emoji, label) {
+  const list = kidsStickers();
+  if (list.includes(emoji)) { toast('✨ 已经拥有这枚贴纸啦'); return false; }
+  list.push(emoji);
+  saveKidsStickers(list);
+  toast('🎉 获得新贴纸 ' + emoji + '（' + label + '）');
+  return true;
+}
+function shuffleArr(a) {
+  const r = a.slice();
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = r[i]; r[i] = r[j]; r[j] = t;
+  }
+  return r;
+}
+
+let kidsTab = 'stories';
+function renderKids(app) {
+  kidsTab = 'stories';
+  app.innerHTML = `
+  <div class="container" style="padding-top:40px">
+    <div class="kids-hero">
+      <div class="kh-emoji">🧒</div>
+      <h1>儿童乐园 · 小小寻宝家</h1>
+      <p>圣经故事、金句游戏、智慧问答、闪闪贴纸——和爸爸妈妈一起，在圣经里寻找隐藏的珍宝吧！</p>
+      <div class="kh-stats">
+        <span>📖 ${KIDS_STORIES.length} 个故事</span>
+        <span>🧩 ${KIDS_VERSE_FILL.length} 句金句</span>
+        <span>🎯 ${KIDS_QUIZ.length} 道问答</span>
+        <span>⭐ ${kidsStickers().length} 枚贴纸</span>
+      </div>
+    </div>
+    <div class="kids-tabs">
+      <button class="kids-tab ${kidsTab === 'stories' ? 'on' : ''}" onclick="kidsGo('stories')">📖 故事乐园</button>
+      <button class="kids-tab ${kidsTab === 'fill' ? 'on' : ''}" onclick="kidsGo('fill')">🧩 金句拼拼</button>
+      <button class="kids-tab ${kidsTab === 'quiz' ? 'on' : ''}" onclick="kidsGo('quiz')">🎯 智慧问答</button>
+      <button class="kids-tab ${kidsTab === 'stickers' ? 'on' : ''}" onclick="kidsGo('stickers')">⭐ 我的贴纸</button>
+    </div>
+    <div id="kids-body"></div>
+  </div>`;
+  renderKidsBody();
+}
+window.kidsGo = function (t) { if (t === 'fill') kidsFillIdx = 0; kidsTab = t; renderKidsBody(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+function renderKidsBody() {
+  const el = document.getElementById('kids-body');
+  if (!el) return;
+  if (kidsTab === 'stories') el.innerHTML = kidsStoriesBody();
+  else if (kidsTab === 'fill') { el.innerHTML = kidsFillBody(); }
+  else if (kidsTab === 'quiz') el.innerHTML = kidsQuizBody();
+  else el.innerHTML = kidsStickersBody();
+}
+
+/* ---- 故事乐园 ---- */
+function kidsStoriesBody() {
+  const p = kidsProgress();
+  const done = p.stories || {};
+  const cards = KIDS_STORIES.map(s => {
+    const isDone = !!done[s.id];
+    return `<div class="kids-card story-card">
+      <div class="sc-emoji">${s.emoji}</div>
+      <div class="sc-head">
+        <h3>${s.title}</h3>
+        <span class="sc-ref">${s.ref} · ${s.tag}</span>
+      </div>
+      <p class="sc-text">${esc(s.text)}</p>
+      <div class="sc-verse">💎 ${esc(s.verse)}</div>
+      <div class="sc-btns">
+        <button class="btn gold sm" onclick="speakKidsStory('${s.id}')">🔊 读给我听</button>
+        ${isDone
+          ? '<span class="sc-done">✅ 已完成 · 贴纸 ' + s.sticker + '</span>'
+          : '<button class="btn ok sm" onclick="completeKidsStory(\'' + s.id + '\')">✅ 读完啦，领贴纸</button>'}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="kids-grid">${cards}</div>`;
+}
+window.speakKidsStory = function (id) {
+  if (ttsActive()) { ttsStop(); toast('⏹ 已停止朗读'); return; }
+  const s = KIDS_STORIES.find(x => x.id === id);
+  if (!s) return;
+  ttsSpeak('《' + s.title + '》。' + s.text + '。经文：' + s.verse.replace(/[「」]/g, ''), '🔊 朗读完毕', 0.92);
+};
+window.completeKidsStory = function (id) {
+  const s = KIDS_STORIES.find(x => x.id === id);
+  if (!s) return;
+  const p = kidsProgress();
+  p.stories = p.stories || {};
+  if (p.stories[id]) { toast('✅ 这个故事你已经完成啦'); return; }
+  p.stories[id] = 1;
+  saveKidsProgress(p);
+  addKidsSticker(s.sticker, '「' + s.title + '」');
+  recordActivity('kids', 'story.' + id, 5);
+  renderKidsBody();
+};
+
+/* ---- 金句拼拼（儿童版：选词填空） ---- */
+let kidsFillIdx = 0;
+function kidsFillBody() {
+  const item = KIDS_VERSE_FILL[kidsFillIdx];
+  if (!item) {
+    return `<div class="game-done">
+      <div class="gd-emoji">🎉</div>
+      <h3>太棒了！金句拼拼全部完成！</h3>
+      <p>你记住了 ${KIDS_VERSE_FILL.length} 句圣经金句，好厉害呀！</p>
+      <button class="btn gold" onclick="kidsGo('fill')">🔁 再玩一次</button>
+    </div>`;
+  }
+  const shown = item.text.replace('____', '<span class="fill-blank" id="fillBlank">＿＿＿</span>');
+  return `<div class="game-box fill-game">
+    <div class="game-top"><span>🧩 金句拼拼</span><span>第 ${kidsFillIdx + 1} / ${KIDS_VERSE_FILL.length} 句</span></div>
+    <div class="fill-ref">${item.ref}</div>
+    <div class="fill-sentence">${shown}</div>
+    <div class="options fill-options" id="fillOptions">
+      ${item.options.map((o, oi) => `<button class="option" id="fillOpt${oi}" onclick="kidsFillPick(${oi})">${esc(o)}</button>`).join('')}
+    </div>
+    <div id="fillFeedback"></div>
+    <div class="game-actions" id="fillNext" style="display:none">
+      <button class="btn gold" onclick="kidsFillNext()">${kidsFillIdx + 1 === KIDS_VERSE_FILL.length ? '🎉 完成挑战' : '➡️ 下一句'}</button>
+    </div>
+  </div>`;
+}
+window.kidsFillPick = function (oi) {
+  const item = KIDS_VERSE_FILL[kidsFillIdx];
+  if (!item) return;
+  const opts = item.options.map((_, i) => document.getElementById('fillOpt' + i)).filter(Boolean);
+  const fb = document.getElementById('fillFeedback');
+  const next = document.getElementById('fillNext');
+  opts.forEach(o => { o.disabled = true; });
+  if (oi === item.answer) {
+    const blank = document.getElementById('fillBlank');
+    if (blank) blank.innerHTML = '<span class="fill-correct">' + esc(item.options[oi]) + '</span>';
+    opts[oi].classList.add('correct');
+    if (fb) fb.innerHTML = '<div class="fill-ok">🎉 答对啦！「' + esc(item.options[oi]) + '」填得真棒！</div>';
+    if (next) next.style.display = 'flex';
+  } else {
+    opts[oi].classList.add('wrong');
+    if (fb) fb.innerHTML = '<div class="fill-bad">😅 再想一想，看看上面那句话哦～</div>';
+    opts.forEach(o => { o.disabled = false; });
+  }
+};
+window.kidsFillNext = function () {
+  if (kidsFillIdx + 1 === KIDS_VERSE_FILL.length) {
+    const first = addKidsSticker('🧩', '金句拼拼');
+    recordActivity('kids', 'fill.all', 8);
+    kidsFillIdx++;
+    renderKidsBody();
+    if (first) toast('🎉 获得贴纸 🧩');
+  } else {
+    kidsFillIdx++;
+    renderKidsBody();
+  }
+};
+
+/* ---- 智慧问答（儿童版） ---- */
+let kidsQuizState = { score: 0, answered: {} };
+function kidsQuizBody() {
+  if (Object.keys(kidsQuizState.answered).length === KIDS_QUIZ.length) {
+    const sc = kidsQuizState.score;
+    const msg = sc === KIDS_QUIZ.length ? '🌟 满分！你是小小圣经博士！' : (sc >= 7 ? '👍 真棒！继续加油！' : '💪 再答一次，一定更棒！');
+    return `<div class="game-done">
+      <div class="gd-emoji">${sc === KIDS_QUIZ.length ? '🌟' : (sc >= 7 ? '👍' : '💪')}</div>
+      <h3>智慧问答完成！</h3>
+      <p>得分：<b style="color:var(--gold-deep);font-size:26px">${sc} / ${KIDS_QUIZ.length}</b></p>
+      <p>${msg}</p>
+      <button class="btn gold" onclick="kidsGo('quiz')">🔁 再来一轮</button>
+    </div>`;
+  }
+  const qs = KIDS_QUIZ.map((q, qi) => {
+    const ans = kidsQuizState.answered[qi];
+    let optionsHtml = q.options.map((o, oi) => {
+      let cls = 'option';
+      if (ans !== undefined) {
+        if (oi === q.answer) cls += ' correct';
+        else if (oi === ans) cls += ' wrong';
+      }
+      const disabled = ans !== undefined ? 'disabled' : '';
+      return `<button class="${cls}" ${disabled} onclick="kidsQuizPick(${qi}, ${oi})"><span class="o-key">${'ABC'[oi]}</span>${esc(o)}</button>`;
+    }).join('');
+    const tip = ans !== undefined ? `<div class="quiz-tip-line">💡 ${esc(q.tip)}</div>` : '';
+    return `<div class="quiz-q kids-q"><div class="step-question">${qi + 1}. ${esc(q.q)}</div><div class="options">${optionsHtml}</div>${tip}</div>`;
+  }).join('');
+  return `<div class="game-box"><div class="game-top"><span>🎯 智慧问答</span><span>答对 ${kidsQuizState.score} 题</span></div>
+    <div class="quiz-tip">每题选一个答案，答完自动显示对错和提示哦～</div>
+    ${qs}</div>`;
+}
+window.kidsQuizPick = function (qi, oi) {
+  if (kidsQuizState.answered[qi] !== undefined) return;
+  kidsQuizState.answered[qi] = oi;
+  if (oi === KIDS_QUIZ[qi].answer) kidsQuizState.score++;
+  renderKidsBody();
+  const all = Object.keys(kidsQuizState.answered).length === KIDS_QUIZ.length;
+  if (all) {
+    if (kidsQuizState.score >= 7) { addKidsSticker('⭐', '智慧问答'); recordActivity('kids', 'quiz.all', 8); }
+    else recordActivity('kids', 'quiz.retry', 2);
+    setTimeout(() => { const el = document.querySelector('.game-done'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 60);
+  }
+};
+
+/* ---- 我的贴纸 ---- */
+function kidsStickersBody() {
+  const list = kidsStickers();
+  const p = kidsProgress();
+  const storyCount = Object.keys(p.stories || {}).length;
+  const prayers = KIDS_PRAYERS.map(pr =>
+    `<div class="prayer-card">
+      <div class="pr-emoji">${pr.emoji}</div>
+      <h3>${pr.title}</h3>
+      <p>${esc(pr.text)}</p>
+      <button class="btn gold sm" onclick="speakKidsPrayer('${esc(pr.title)}')">🔊 陪我一起祷告</button>
+    </div>`).join('');
+  return `
+  <div class="sticker-panel">
+    <div class="sticker-head">
+      <h3>⭐ 我的贴纸墙</h3>
+      <span>已收集 ${list.length} 枚</span>
+    </div>
+    <div class="sticker-wall">
+      ${list.length ? list.map(s => `<span class="sticker-chip" title="${esc(s)}">${s}</span>`).join('') : '<div class="sticker-empty">还没有贴纸～去读一个故事、拼一句金句吧！</div>'}
+    </div>
+    <p class="sticker-help">💡 ${KIDS_STICKER_HELP}</p>
+    <div style="margin-top:10px"><button class="btn ghost sm" onclick="resetKidsStickers()">🧹 清空贴纸</button></div>
+  </div>
+  <div class="section" style="margin-top:36px">
+    <div class="section-head"><h2>🙏 亲子祷告</h2><span class="sub">和爸爸妈妈一起祷告</span></div>
+    <div class="kids-grid">${prayers}</div>
+  </div>
+  <div class="section" style="margin-top:36px">
+    <div class="section-head"><h2>📈 我的小小成就</h2></div>
+    <div class="kids-stats-row">
+      <div class="kids-stat"><b>${storyCount}</b><span>读完的故事</span></div>
+      <div class="kids-stat"><b>${list.length}</b><span>收集的贴纸</span></div>
+      <div class="kids-stat"><b>${KIDS_VERSE_FILL.length}</b><span>可背的金句</span></div>
+      <div class="kids-stat"><b>${KIDS_QUIZ.length}</b><span>智慧问答</span></div>
+    </div>
+  </div>`;
+}
+window.speakKidsPrayer = function (title) {
+  if (ttsActive()) { ttsStop(); toast('⏹ 已停止朗读'); return; }
+  const pr = KIDS_PRAYERS.find(x => x.title === title);
+  if (!pr) return;
+  ttsSpeak(pr.title + '。' + pr.text, '🔊 朗读完毕', 0.9);
+};
+window.resetKidsStickers = function () {
+  if (!confirm('确定要清空所有贴纸吗？')) return;
+  saveKidsStickers([]);
+  saveKidsProgress({});
+  kidsTab = 'stickers';
+  renderKidsBody();
+  toast('🧹 已清空');
+};
+
+/* ============================================================
+ * 🎮 趣味乐园（所有人）
+ * ============================================================ */
+function renderGames(app) {
+  app.innerHTML = `
+  <div class="container" style="padding-top:40px">
+    <div class="section-head" style="margin-bottom:4px"><h1 style="font-size:33px">🎮 趣味乐园</h1></div>
+    <p style="color:var(--muted);max-width:720px">查经也可以很好玩！把经文打乱拼回去、用快问快答检验自己——边玩边学，记住更多神的话语。</p>
+    <div class="games-grid">
+      <div class="card game-card">
+        <div class="gc-emoji">🧩</div>
+        <h3>金句拼拼看</h3>
+        <p>打乱的词组，按顺序拼回一句完整的经文。考验你对神话语的熟悉程度！</p>
+        <button class="btn gold" onclick="startScramble()">🎲 开始拼金句</button>
+        <div id="scramble-wrap"></div>
+      </div>
+      <div class="card game-card">
+        <div class="gc-emoji">🎯</div>
+        <h3>圣经快问快答</h3>
+        <p>${QUICK_QUESTIONS.length} 道趣味圣经知识题，答完看评分，每题都有小提示。</p>
+        <button class="btn gold" onclick="startQuickQuiz()">🚀 开始答题</button>
+        <div id="quick-wrap"></div>
+      </div>
+      <div class="card game-card kids-game-link">
+        <div class="gc-emoji">🧒</div>
+        <h3>儿童乐园</h3>
+        <p>给小朋友的圣经故事、金句拼拼、智慧问答和闪闪贴纸。</p>
+        <a class="btn indigo" href="#/kids">去儿童乐园 →</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---- 金句拼拼看 ---- */
+let scrambleRun = { idx: 0, order: [], chosen: [], wrongFlash: false };
+function scrambleVerse() { return VERSE_SCRAMBLE[scrambleRun.idx]; }
+window.startScramble = function () {
+  scrambleRun.idx = Math.floor(Math.random() * VERSE_SCRAMBLE.length);
+  scrambleRun.order = shuffleArr(VERSE_SCRAMBLE[scrambleRun.idx].chunks.map((_, i) => i));
+  scrambleRun.chosen = [];
+  renderScramble();
+};
+function renderScramble() {
+  const wrap = document.getElementById('scramble-wrap');
+  if (!wrap) return;
+  const v = scrambleVerse();
+  const remain = v.chunks.length - scrambleRun.chosen.length;
+  const slots = v.chunks.map((_, i) => {
+    const filled = i < scrambleRun.chosen.length;
+    const txt = filled ? v.chunks[scrambleRun.chosen[i]] : '';
+    return `<div class="scramble-slot ${filled ? 'filled' : ''}">${filled ? esc(txt) : (i + 1)}</div>`;
+  }).join('');
+  const pool = scrambleRun.order.map((idx, i) => {
+    const used = scrambleRun.chosen.indexOf(idx) >= 0;
+    return `<button class="scramble-chip ${used ? 'used' : ''}" ${used ? 'disabled' : ''} onclick="scramblePick(${idx})">${esc(v.chunks[idx])}</button>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div class="scramble-box">
+      <div class="scramble-ref">❓ 猜猜是哪句经文？（共 ${v.chunks.length} 个词组）</div>
+      <div class="scramble-slots">${slots}</div>
+      <div class="scramble-pool">${pool}</div>
+      <div class="scramble-actions">
+        <button class="btn ghost sm" onclick="scrambleHint()">💡 提示</button>
+        <button class="btn ghost sm" onclick="startScramble()">🔀 换一句</button>
+      </div>
+      <div id="scramble-fb"></div>
+    </div>`;
+}
+window.scramblePick = function (idx) {
+  const v = scrambleVerse();
+  const expected = scrambleRun.chosen.length;
+  if (idx !== expected) {
+    const btn = document.querySelectorAll('.scramble-chip')[scrambleRun.order.indexOf(idx)];
+    if (btn) { btn.classList.add('shake'); setTimeout(() => btn.classList.remove('shake'), 450); }
+    const fb = document.getElementById('scramble-fb');
+    if (fb) fb.innerHTML = '<div class="fill-bad">😅 顺序不对哦，再试试看！</div>';
+    return;
+  }
+  scrambleRun.chosen.push(idx);
+  renderScramble();
+  if (scrambleRun.chosen.length === v.chunks.length) {
+    const first = addKidsSticker('🧩', '金句拼拼看');
+    recordActivity('game', 'scramble.' + v.ref, 6);
+    const fb = document.getElementById('scramble-fb');
+    if (fb) fb.innerHTML = `<div class="fill-ok">🎉 拼对啦！<b>${esc(v.ref)}</b>${first ? ' · 获得贴纸 🧩' : ''}</div>`;
+    if (first) setTimeout(() => { const wall = document.querySelector('.kids-tabs'); }, 0);
+  }
+};
+window.scrambleHint = function () {
+  const v = scrambleVerse();
+  const expected = scrambleRun.chosen.length;
+  const hint = v.chunks[expected];
+  const fb = document.getElementById('scramble-fb');
+  if (fb) fb.innerHTML = '<div class="fill-ok">💡 下一个词组是：「' + esc(hint) + '」</div>';
+};
+
+/* ---- 快问快答 ---- */
+let quickRun = { score: 0, idx: 0, done: 0 };
+window.startQuickQuiz = function () {
+  quickRun = { score: 0, idx: 0, done: 0 };
+  renderQuickQ();
+};
+function renderQuickQ() {
+  const wrap = document.getElementById('quick-wrap');
+  if (!wrap) return;
+  if (quickRun.done === QUICK_QUESTIONS.length) {
+    const sc = quickRun.score;
+    const msg = sc === QUICK_QUESTIONS.length ? '🌟 满分！圣经知识达人！' : (sc >= 8 ? '👍 真不错！' : (sc >= 5 ? '😊 继续加油！' : '💪 多查经，会更棒！'));
+    wrap.innerHTML = `<div class="game-done">
+      <div class="gd-emoji">${sc === QUICK_QUESTIONS.length ? '🌟' : '👍'}</div>
+      <h3>快问快答完成！</h3>
+      <p>得分：<b style="color:var(--gold-deep);font-size:26px">${sc} / ${QUICK_QUESTIONS.length}</b></p>
+      <p>${msg}</p>
+      <button class="btn gold" onclick="startQuickQuiz()">🔁 再来一轮</button>
+    </div>`;
+    if (sc >= 8) { addKidsSticker('🎯', '快问快答'); recordActivity('game', 'quick.all', 8); }
+    return;
+  }
+  const q = QUICK_QUESTIONS[quickRun.idx];
+  const opts = q.options.map((o, oi) => `<button class="option" onclick="quickPick(${oi})"><span class="o-key">${'ABCD'[oi]}</span>${esc(o)}</button>`).join('');
+  wrap.innerHTML = `<div class="quick-box">
+    <div class="game-top"><span>🎯 快问快答</span><span>第 ${quickRun.idx + 1} / ${QUICK_QUESTIONS.length} 题 · 已答对 ${quickRun.score}</span></div>
+    <div class="quick-q-text">${esc(q.q)}</div>
+    <div class="options">${opts}</div>
+    <div id="quick-fb"></div>
+  </div>`;
+}
+window.quickPick = function (oi) {
+  const q = QUICK_QUESTIONS[quickRun.idx];
+  const fb = document.getElementById('quick-fb');
+  const opts = document.querySelectorAll('#quick-wrap .option');
+  opts.forEach(o => o.disabled = true);
+  if (oi === q.answer) {
+    quickRun.score++;
+    opts[oi].classList.add('correct');
+    if (fb) fb.innerHTML = `<div class="fill-ok">✅ 答对啦！${esc(q.tip)}</div>`;
+  } else {
+    opts[oi].classList.add('wrong');
+    opts[q.answer].classList.add('correct');
+    if (fb) fb.innerHTML = `<div class="fill-bad">❌ 答案是「${esc(q.options[q.answer])}」。${esc(q.tip)}</div>`;
+  }
+  quickRun.done++;
+  if (fb) fb.innerHTML += `<div style="margin-top:12px"><button class="btn gold sm" onclick="${quickRun.done === QUICK_QUESTIONS.length ? 'renderQuickQ()' : 'quickNext()'}">${quickRun.done === QUICK_QUESTIONS.length ? '🏁 查看成绩' : '➡️ 下一题'}</button></div>`;
+};
+window.quickNext = function () { quickRun.idx++; renderQuickQ(); };
+
+/* ---- 首页趣味学习卡片 ---- */
+function renderFunGrid() {
+  const cards = [
+    { emoji: '🧒', name: '儿童乐园', desc: '圣经故事 · 金句拼拼 · 智慧问答 · 贴纸墙', href: '#/kids', tag: '亲子 · 儿童' },
+    { emoji: '🧩', name: '金句拼拼看', desc: '把打乱的词组拼回一句经文，记住神的话', href: '#/games', tag: '记忆 · 游戏' },
+    { emoji: '🎯', name: '快问快答', desc: '12道趣味圣经知识题，答完看评分', href: '#/games', tag: '挑战 · 竞答' }
+  ];
+  return `<div class="mode-grid fun-grid">` + cards.map(c =>
+    `<a class="card mode-card" href="${c.href}">
+      <div class="mc-emoji">${c.emoji}</div>
+      <h3>${c.name}</h3>
+      <p>${c.desc}</p>
+      <span class="mc-tag">${c.tag}</span>
+    </a>`).join('') + `</div>`;
+}
+
 /* ---------- 页脚 ---------- */
 function renderFooter() {
   return `
@@ -1336,6 +1774,8 @@ function renderFooter() {
         <a class="tag-link" href="#/themes">❤️ 主题地图</a>
         <a class="tag-link" href="#/people">👤 人物地图</a>
         <a class="tag-link" href="#/modes">🧭 四种查经模式</a>
+        <a class="tag-link" href="#/kids">🧒 儿童乐园</a>
+        <a class="tag-link" href="#/games">🎮 趣味乐园</a>
         <a class="tag-link" href="#/progress">🗺️ 我的旅程</a>
         <a class="tag-link" href="./index.html">💎 返回首页</a>
       </div>
@@ -1420,22 +1860,48 @@ window.shareVerseCard = function () {
   setTimeout(() => { a.remove(); }, 800);
   toast('🖼️ 经文分享卡已生成，请在「下载」中查看');
 };
-window.speakVerse = function (key) {
-  if (!window.speechSynthesis) { toast('⚠️ 当前浏览器不支持朗读'); return; }
-  if (speechSynthesis.speaking) { speechSynthesis.cancel(); toast('⏹ 已停止朗读'); return; }
-  let text = '';
-  if (key === 'daily') { const v = dailyVerse(); text = v.ref + '。' + v.text; }
-  else {
-    const parts = String(key).split('.');
-    const b = getBook(parts[0]);
-    const lesson = getLesson(parts[0], parseInt(parts[1], 10));
-    text = lesson && lesson.memoryVerse ? lesson.memoryVerse : ((b ? b.name : '') + ' 第' + parts[1] + '章');
+/* ============================================================
+ * 🔊 朗读引擎（兼容安卓 / 苹果 / 电脑）
+ * 系统语音优先；安卓或系统无中文语音时自动改用网络音频朗读，
+ * 网络音频不可用时自动回退系统朗读。再次点击同一按钮可停止。
+ * ============================================================ */
+let ttsAudioEl = null;      // 当前网络音频播放器
+let ttsAudioQueue = [];     // 剩余待播文本
+let ttsAudioStop = false;   // 停止标记
+let ttsLoading = false;     // 经文加载中标记
+
+function isAndroidUA() {
+  return /Android/i.test(navigator.userAgent || '');
+}
+function ttsHasZhVoice() {
+  try {
+    const vs = window.speechSynthesis.getVoices();
+    return !!(vs && vs.some(v => /zh|cmn|chinese/i.test((v.lang || '') + ' ' + (v.name || ''))));
+  } catch (e) { return false; }
+}
+function ttsUseSystem() {
+  if (!window.speechSynthesis || typeof window.speechSynthesis.speak !== 'function') return false;
+  if (!isAndroidUA()) return true;   // 苹果/电脑一般都有中文语音
+  return ttsHasZhVoice();            // 安卓：只有检测到中文语音才用系统朗读
+}
+function ttsActive() {
+  if (ttsLoading) return true;
+  if (ttsAudioEl || ttsAudioQueue.length) return true;
+  try { if (window.speechSynthesis && window.speechSynthesis.speaking) return true; } catch (e) {}
+  return false;
+}
+function ttsStop() {
+  ttsAudioStop = true;
+  ttsLoading = false;
+  ttsAudioQueue = [];
+  if (ttsAudioEl) {
+    try { ttsAudioEl.pause(); ttsAudioEl.onended = null; ttsAudioEl.onerror = null; } catch (e) {}
+    ttsAudioEl = null;
   }
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-CN'; u.rate = 0.95;
-  speechSynthesis.speak(u);
-};
+  if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+}
+window.stopSpeak = function () { ttsStop(); toast('⏹ 已停止朗读'); };
+
 function chunkText(text, max) {
   const t = String(text);
   const chunks = [];
@@ -1451,36 +1917,107 @@ function chunkText(text, max) {
   if (buf) chunks.push(buf);
   return chunks;
 }
+
+function ttsSpeakSystemChunks(chunks, doneMsg, rate) {
+  if (!chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+  let idx = 0;
+  const next = () => {
+    if (ttsAudioStop) return;
+    if (idx >= chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+    const u = new SpeechSynthesisUtterance(chunks[idx]);
+    u.lang = 'zh-CN';
+    u.rate = rate || 0.95;
+    u.onend = () => { idx++; next(); };
+    u.onerror = (e) => {
+      if (ttsAudioStop) return;
+      if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
+      idx++; next();
+    };
+    try { window.speechSynthesis.speak(u); } catch (err) { idx++; next(); }
+  };
+  try { window.speechSynthesis.cancel(); } catch (e) {}
+  next();
+}
+
+function ttsAudioUrls(text) {
+  return [
+    'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=' + encodeURIComponent(text),
+    'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=2'
+  ];
+}
+function ttsSpeakAudioChunks(chunks, doneMsg) {
+  if (!chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+  const queue = chunks.slice();
+  const playNext = () => {
+    if (ttsAudioStop) return;
+    if (!queue.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+    const text = queue.shift();
+    const urls = ttsAudioUrls(text);
+    let ui = 0;
+    const tryUrl = () => {
+      if (ttsAudioStop) return;
+      if (ui >= urls.length) {
+        if (!ttsAudioStop) { toast('⚠️ 网络音频不可用，改用系统朗读'); ttsSpeakSystemChunks([text].concat(queue), doneMsg, 0.95); }
+        return;
+      }
+      const a = new Audio();
+      ttsAudioEl = a;
+      a.src = urls[ui];
+      a.onended = () => { if (ttsAudioEl === a) ttsAudioEl = null; playNext(); };
+      a.onerror = () => { if (ttsAudioEl === a) ttsAudioEl = null; ui++; tryUrl(); };
+      a.play().catch(() => { if (ttsAudioEl === a) ttsAudioEl = null; ui++; tryUrl(); });
+    };
+    tryUrl();
+  };
+  playNext();
+}
+
+function ttsSpeak(text, doneMsg, rate) {
+  ttsStop();
+  ttsAudioStop = false;
+  if (!text) { toast('⚠️ 没有可朗读的内容'); return; }
+  if (ttsUseSystem()) {
+    ttsSpeakSystemChunks(chunkText(text, 450), doneMsg, rate);
+  } else {
+    toast('🔊 正在朗读…');
+    ttsSpeakAudioChunks(chunkText(text, 160), doneMsg);
+  }
+}
+
+/* ---------- 朗读：每日珍宝 / 存心节 ---------- */
+window.speakVerse = function (key) {
+  if (ttsActive()) { ttsStop(); toast('⏹ 已停止朗读'); return; }
+  let text = '';
+  if (key === 'daily') { const v = dailyVerse(); text = v.ref + '。' + v.text; }
+  else {
+    const parts = String(key).split('.');
+    const b = getBook(parts[0]);
+    const lesson = getLesson(parts[0], parseInt(parts[1], 10));
+    text = lesson && lesson.memoryVerse ? lesson.memoryVerse : ((b ? b.name : '') + ' 第' + parts[1] + '章');
+  }
+  ttsSpeak(text, '🔊 朗读完毕', 0.95);
+};
+
+/* ---------- 朗读：本章全文 ---------- */
 window.speakChapter = async function (key) {
-  if (!window.speechSynthesis) { toast('⚠️ 当前浏览器不支持语音朗读'); return; }
-  if (speechSynthesis.speaking) { speechSynthesis.cancel(); toast('⏹ 已停止朗读'); return; }
+  if (ttsActive()) { ttsStop(); toast('⏹ 已停止朗读'); return; }
+  ttsAudioStop = false;
+  ttsLoading = true;
   let raw = bibleTextRaw[key] || cachedRaw(key);
   if (!raw) {
     toast('⏳ 正在加载经文，稍后自动朗读…');
     await loadChapterText(key);
     raw = bibleTextRaw[key] || cachedRaw(key);
   }
+  ttsLoading = false;
+  if (ttsAudioStop) return;   // 加载期间用户点了停止
   if (!raw) { toast('⚠️ 经文加载失败，暂时无法朗读'); return; }
   const parts = String(key).split('.');
   const b = getBook(parts[0]);
   const head = (b ? b.name + '，第' + parts[1] + '章。' : '');
-  const chunks = chunkText(head + raw, 450);
-  let idx = 0;
-  const speakNext = () => {
-    if (idx >= chunks.length) { toast('🔊 本章朗读完毕'); return; }
-    const u = new SpeechSynthesisUtterance(chunks[idx]);
-    u.lang = 'zh-CN'; u.rate = 0.9;
-    u.onend = () => { idx++; speakNext(); };
-    u.onerror = (e) => {
-      if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
-      idx++; speakNext();
-    };
-    speechSynthesis.speak(u);
-  };
-  speechSynthesis.cancel();
-  speakNext();
-  toast('🔊 正在朗读本章全文…');
+  ttsSpeak(head + raw, '🔊 本章朗读完毕', 0.9);
 };
+
 function badgeCheck() {
   const c = store.counters || {};
   const booksDone = () => BOOKS.filter(b => bookProgress(b.id) >= 1).length;

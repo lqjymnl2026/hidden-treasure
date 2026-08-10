@@ -122,6 +122,7 @@
         <p class="desc">📚 66卷圣经互动学习平台 · 主题 · 人物 · 进度</p>
         <div class="btn-row">
             <a href="platform.html" class="start-btn">📖 进入66卷互动查经</a>
+            <a href="platform.html#/kids" class="start-btn ghost">🧒 儿童乐园</a>
             <a href="整本圣经知识问答闯关_手机版.html" class="start-btn ghost">🧠 开始闯关</a>
         </div>
         <div class="verse">
@@ -134,7 +135,7 @@
             <div class="daily-ref" id="dailyRef"></div>
         </div>
     </div>
-<audio id="bgMusic" src="music/light-ambient.wav" loop preload="none"></audio>
+<audio id="bgMusic" src="music/light-ambient.wav" loop preload="auto" playsinline></audio>
 <script src="js/data/verses.js"></script>
 <script>
 (function(){try{var v=dailyVerse();document.getElementById('dailyVerseBox').style.display='block';document.getElementById('dailyText').textContent='"'+v.text+'"';document.getElementById('dailyRef').textContent='—— '+v.ref;}catch(e){}})();

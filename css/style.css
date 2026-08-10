@@ -628,3 +628,126 @@ input, textarea { font-family: inherit; }
 .rt-ref { color: var(--muted); font-size: 13px; }
 
 .ex-size { font-size: 13px; color: var(--gold-deep); font-weight: 700; margin-bottom: 10px; }
+
+/* ============================================================
+ * 🧒 儿童乐园 + 🎮 趣味乐园
+ * ============================================================ */
+.kids-hero {
+  background: linear-gradient(135deg, #7f9cf5 0%, #9f7aea 55%, #f687b3 100%);
+  color: #fff; border-radius: 20px; padding: 34px 30px; text-align: center;
+  box-shadow: 0 14px 40px rgba(127, 156, 245, 0.25); position: relative; overflow: hidden;
+}
+.kids-hero .kh-emoji { font-size: 56px; }
+.kids-hero h1 { font-size: 31px; margin: 8px 0 6px; font-weight: 900; letter-spacing: 0.02em; }
+.kids-hero p { font-size: 17px; color: rgba(255,255,255,0.92); max-width: 620px; margin: 0 auto; }
+.kh-stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+.kh-stats span {
+  background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 14px; border-radius: 999px; font-size: 15px; font-weight: 700;
+}
+.kids-tabs {
+  display: flex; gap: 8px; margin: 22px 0 26px; flex-wrap: wrap;
+  position: sticky; top: 62px; z-index: 30; background: var(--paper); padding: 8px 0;
+}
+.kids-tab {
+  border: 2px solid var(--line); background: #fff; color: var(--ink-soft);
+  padding: 10px 20px; border-radius: 999px; font-size: 17px; font-weight: 700; cursor: pointer;
+  transition: all .15s;
+}
+.kids-tab:hover { border-color: var(--indigo); color: var(--indigo); }
+.kids-tab.on { background: linear-gradient(135deg, #7f9cf5, #9f7aea); border-color: transparent; color: #fff; }
+.kids-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.kids-card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 22px; display: flex; flex-direction: column; gap: 10px;
+}
+.story-card .sc-emoji { font-size: 42px; }
+.story-card .sc-head h3 { font-size: 21px; font-weight: 800; }
+.story-card .sc-ref { color: var(--muted); font-size: 14.5px; font-weight: 600; }
+.story-card .sc-text { font-size: 16px; line-height: 1.85; color: var(--ink-soft); }
+.story-card .sc-verse {
+  background: var(--cream); border-left: 4px solid var(--gold);
+  padding: 10px 14px; border-radius: 10px; font-size: 15px; color: var(--ink-soft); line-height: 1.7;
+}
+.story-card .sc-btns { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: auto; }
+.story-card .sc-done { color: var(--ok); font-weight: 700; font-size: 15px; }
+.btn.ok { background: var(--ok); color: #fff; }
+.btn.ok:hover { filter: brightness(1.08); }
+.btn.indigo { background: var(--indigo); color: #fff; }
+.btn.indigo:hover { filter: brightness(1.1); }
+.game-box {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 26px;
+}
+.game-top { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 18px; margin-bottom: 12px; color: var(--indigo); }
+.game-done { text-align: center; padding: 46px 24px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.gd-emoji { font-size: 56px; }
+.game-done h3 { font-size: 24px; margin: 10px 0 6px; }
+.game-done p { color: var(--muted); margin: 4px 0 18px; }
+.fill-ref { font-size: 15px; color: var(--gold-deep); font-weight: 800; margin-bottom: 8px; }
+.fill-sentence { font-size: 23px; line-height: 1.8; font-family: var(--serif); margin: 14px 0; padding: 16px; background: var(--cream); border-radius: 12px; }
+.fill-blank { border-bottom: 3px dashed var(--gold); color: var(--muted); font-weight: 700; }
+.fill-correct { color: var(--ok); font-weight: 800; border-bottom: 3px solid var(--ok); }
+.fill-options { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.fill-ok { background: var(--ok-bg); color: var(--ok); padding: 12px 16px; border-radius: 10px; font-weight: 700; margin-top: 12px; }
+.fill-bad { background: var(--warn-bg); color: var(--warn); padding: 12px 16px; border-radius: 10px; font-weight: 700; margin-top: 12px; }
+.game-actions { display: flex; justify-content: center; margin-top: 16px; }
+.quiz-tip-line { margin-top: 8px; font-size: 14.5px; color: var(--muted); background: #f7f4ec; padding: 8px 12px; border-radius: 8px; }
+.sticker-panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+.sticker-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sticker-head h3 { font-size: 22px; font-weight: 800; }
+.sticker-head span { color: var(--gold-deep); font-weight: 800; }
+.sticker-wall { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; min-height: 60px; padding: 16px; background: var(--cream); border-radius: 14px; }
+.sticker-chip {
+  width: 52px; height: 52px; font-size: 30px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: 14px; box-shadow: 0 3px 10px rgba(31,36,48,.1);
+  animation: stickerPop .35s ease;
+}
+@keyframes stickerPop { 0% { transform: scale(0) rotate(-20deg); } 80% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.sticker-empty { color: var(--muted); text-align: center; width: 100%; padding: 16px 0; }
+.sticker-help { font-size: 14.5px; color: var(--muted); }
+.kids-stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kids-stat { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; text-align: center; box-shadow: var(--shadow); }
+.kids-stat b { display: block; font-size: 28px; color: var(--indigo); }
+.kids-stat span { color: var(--muted); font-size: 14.5px; }
+.prayer-card { background: linear-gradient(160deg, #fff 60%, #fdf6ec); }
+.prayer-card .pr-emoji { font-size: 38px; }
+.prayer-card h3 { font-size: 19px; margin: 6px 0; }
+.prayer-card p { font-size: 15.5px; line-height: 1.8; color: var(--ink-soft); }
+
+/* ---- 趣味乐园 ---- */
+.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 26px; align-items: start; }
+.game-card { padding: 26px; display: flex; flex-direction: column; gap: 10px; }
+.game-card .gc-emoji { font-size: 44px; }
+.game-card h3 { font-size: 21px; font-weight: 800; }
+.game-card p { color: var(--muted); font-size: 15.5px; }
+.game-card .btn { align-self: flex-start; }
+.kids-game-link { background: linear-gradient(160deg, #fff 55%, #f3f0ff); }
+.scramble-box { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px; }
+.scramble-ref { font-size: 15px; color: var(--gold-deep); font-weight: 800; margin-bottom: 10px; }
+.scramble-slots { display: flex; flex-wrap: wrap; gap: 8px; min-height: 58px; padding: 12px; background: var(--cream); border-radius: 12px; margin-bottom: 12px; }
+.scramble-slot {
+  min-width: 74px; padding: 8px 12px; border-radius: 10px; border: 2px dashed #d5c9ad;
+  color: var(--muted); font-weight: 800; text-align: center; font-size: 15.5px;
+}
+.scramble-slot.filled { border-style: solid; border-color: var(--gold); background: #fff; color: var(--ink); }
+.scramble-pool { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.scramble-chip {
+  padding: 8px 14px; border-radius: 10px; border: 2px solid var(--indigo); background: #fff;
+  color: var(--indigo); font-weight: 800; font-size: 15.5px; cursor: pointer; transition: all .12s;
+}
+.scramble-chip:hover:not(:disabled) { background: var(--indigo); color: #fff; }
+.scramble-chip.used { opacity: .35; border-color: var(--line); color: var(--muted); cursor: default; }
+.scramble-chip.shake { animation: shake .45s; border-color: #c53030; color: #c53030; }
+@keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 50%{transform:translateX(6px);} 75%{transform:translateX(-4px);} }
+.scramble-actions { display: flex; gap: 8px; }
+.quick-box { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 16px; }
+.quick-q-text { font-size: 21px; font-weight: 800; margin: 12px 0; }
+
+@media (max-width: 720px) {
+  .kids-grid { grid-template-columns: 1fr; }
+  .kids-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .games-grid { grid-template-columns: 1fr; }
+  .kids-tabs { top: 0; }
+  .fill-sentence { font-size: 20px; }
+}
