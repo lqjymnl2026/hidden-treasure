@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>隐藏的珍宝｜圣经互动学习平台</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b3a6b">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -150,5 +154,8 @@
     ['pointerdown','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,function h(){tp();document.removeEventListener(ev,h);});});
     })();
     </script>
-  </body>
+  <script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
+</script>
+</body>
 </html>
