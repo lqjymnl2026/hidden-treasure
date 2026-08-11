@@ -2020,6 +2020,7 @@ function ttsSpeakAudioChunks(chunks, doneMsg) {
 function ttsSpeak(text, doneMsg, rate) {
   ttsStop();
   ttsAudioStop = false;
+  try { if (window.speechSynthesis) window.speechSynthesis.resume(); } catch (e) {}
   if (!text) { toast('⚠️ 没有可朗读的内容'); return; }
   if (ttsUseSystem()) {
     ttsSpeakSystemChunks(chunkText(text, isAndroidUA() ? 180 : 450), doneMsg, rate);
@@ -2047,19 +2048,19 @@ window.speakVerse = function (key) {
 window.speakChapter = async function (key) {
   if (ttsActive()) { ttsStop(); toast('⏹ 已停止朗读'); return; }
   ttsAudioStop = false;
-  ttsLoading = true;
-  let raw = bibleTextRaw[key] || cachedRaw(key);
-  if (!raw) {
-    toast('⏳ 正在加载经文，稍后自动朗读…');
-    await loadChapterText(key);
-    raw = bibleTextRaw[key] || cachedRaw(key);
-  }
-  ttsLoading = false;
-  if (ttsAudioStop) return;   // 加载期间用户点了停止
-  if (!raw) { toast('⚠️ 经文加载失败，暂时无法朗读'); return; }
   const parts = String(key).split('.');
   const b = getBook(parts[0]);
   const head = (b ? b.name + '，第' + parts[1] + '章。' : '');
+  // 立即（在点击手势内）预激活语音引擎，安卓浏览器才不会因 await 丢手势而拦截
+  try { if (window.speechSynthesis) { window.speechSynthesis.cancel(); window.speechSynthesis.resume(); } } catch (e) {}
+  let raw = bibleTextRaw[key] || cachedRaw(key);
+  if (raw) { ttsSpeak(head + raw, '🔊 本章朗读完毕', 0.9); return; }
+  toast('⏳ 正在加载经文，稍后自动朗读…');
+  ttsLoading = true;
+  try { await loadChapterText(key); } finally { ttsLoading = false; }
+  if (ttsAudioStop) return;   // 加载期间用户点了停止
+  raw = bibleTextRaw[key] || cachedRaw(key);
+  if (!raw) { toast('⚠️ 经文加载失败，暂时无法朗读'); return; }
   ttsSpeak(head + raw, '🔊 本章朗读完毕', 0.9);
 };
 
