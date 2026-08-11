@@ -1873,16 +1873,34 @@ let ttsLoading = false;     // 经文加载中标记
 function isAndroidUA() {
   return /Android/i.test(navigator.userAgent || '');
 }
-function ttsHasZhVoice() {
+/* 安卓 Chrome 的 getVoices() 一开始是空的，要等 voiceschanged 事件；这里页面加载时就预载 */
+let ttsVoices = [];
+function ttsRefreshVoices() {
+  try { ttsVoices = window.speechSynthesis.getVoices() || []; } catch (e) { ttsVoices = []; }
+}
+function ttsPreloadVoices() {
+  if (!window.speechSynthesis) return;
+  ttsRefreshVoices();
   try {
-    const vs = window.speechSynthesis.getVoices();
-    return !!(vs && vs.some(v => /zh|cmn|chinese/i.test((v.lang || '') + ' ' + (v.name || ''))));
-  } catch (e) { return false; }
+    if (typeof window.speechSynthesis.onvoiceschanged === 'object' || window.speechSynthesis.addEventListener) {
+      window.speechSynthesis.addEventListener('voiceschanged', ttsRefreshVoices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = ttsRefreshVoices;
+    }
+  } catch (e) { try { window.speechSynthesis.onvoiceschanged = ttsRefreshVoices; } catch (e2) {} }
+}
+ttsPreloadVoices();
+function ttsHasZhVoice() {
+  ttsRefreshVoices();
+  return !!(ttsVoices && ttsVoices.some(v => /zh|cmn|chinese/i.test((v.lang || '') + ' ' + (v.name || ''))));
+}
+function ttsCanSystem() {
+  return !!(window.speechSynthesis && typeof window.speechSynthesis.speak === 'function');
 }
 function ttsUseSystem() {
-  if (!window.speechSynthesis || typeof window.speechSynthesis.speak !== 'function') return false;
+  if (!ttsCanSystem()) return false;
   if (!isAndroidUA()) return true;   // 苹果/电脑一般都有中文语音
-  return ttsHasZhVoice();            // 安卓：只有检测到中文语音才用系统朗读
+  return ttsHasZhVoice();            // 安卓：检测到中文语音才用系统朗读（预载后一般都能检测到）
 }
 function ttsActive() {
   if (ttsLoading) return true;
@@ -1920,20 +1938,35 @@ function chunkText(text, max) {
 
 function ttsSpeakSystemChunks(chunks, doneMsg, rate) {
   if (!chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
-  let idx = 0;
-  const next = () => {
+  let idx = 0, started = false, watchdog = null;
+  const clearWatch = () => { if (watchdog){ clearTimeout(watchdog); watchdog = null; } };
+  const failToNetwork = () => {
+    clearWatch();
     if (ttsAudioStop) return;
-    if (idx >= chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+    toast('⚠️ 系统语音无响应，改用网络音频');
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    ttsSpeakAudioChunks(chunks, doneMsg);
+  };
+  const next = () => {
+    if (ttsAudioStop) { clearWatch(); return; }
+    if (idx >= chunks.length) { clearWatch(); toast(doneMsg || '🔊 朗读完毕'); return; }
     const u = new SpeechSynthesisUtterance(chunks[idx]);
     u.lang = 'zh-CN';
     u.rate = rate || 0.95;
-    u.onend = () => { idx++; next(); };
+    u.onstart = () => { started = true; clearWatch(); };
+    u.onend = () => { if (ttsAudioStop){ clearWatch(); return; } idx++; next(); };
     u.onerror = (e) => {
-      if (ttsAudioStop) return;
+      if (ttsAudioStop) { clearWatch(); return; }
       if (e && (e.error === 'interrupted' || e.error === 'canceled')) return;
+      if (!started) { failToNetwork(); return; }
       idx++; next();
     };
-    try { window.speechSynthesis.speak(u); } catch (err) { idx++; next(); }
+    try {
+      window.speechSynthesis.speak(u);
+      if (isAndroidUA()) { try { window.speechSynthesis.pause(); window.speechSynthesis.resume(); } catch (e) {} }
+    } catch (err) { idx++; next(); }
+    // 首段 3 秒内没有真正出声 -> 回退网络音频
+    if (!started && !watchdog) watchdog = setTimeout(() => { if (!started && !ttsAudioStop) failToNetwork(); }, 3000);
   };
   try { window.speechSynthesis.cancel(); } catch (e) {}
   next();
@@ -1941,8 +1974,9 @@ function ttsSpeakSystemChunks(chunks, doneMsg, rate) {
 
 function ttsAudioUrls(text) {
   return [
-    'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=' + encodeURIComponent(text),
-    'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=2'
+    'https://fanyi.baidu.com/gettts?lan=zh&spd=5&source=web&text=' + encodeURIComponent(text),
+    'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(text) + '&type=2',
+    'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=' + encodeURIComponent(text)
   ];
 }
 function ttsSpeakAudioChunks(chunks, doneMsg) {
@@ -1965,7 +1999,18 @@ function ttsSpeakAudioChunks(chunks, doneMsg) {
       a.src = urls[ui];
       a.onended = () => { if (ttsAudioEl === a) ttsAudioEl = null; playNext(); };
       a.onerror = () => { if (ttsAudioEl === a) ttsAudioEl = null; ui++; tryUrl(); };
-      a.play().catch(() => { if (ttsAudioEl === a) ttsAudioEl = null; ui++; tryUrl(); });
+      a.play().catch((err) => {
+        if (ttsAudioEl === a) ttsAudioEl = null;
+        // 安卓自动播放被拦截（用户手势已失效）-> 直接回退系统朗读
+        if (err && (err.name === 'NotAllowedError' || /autoplay|user gesture|interrupt/i.test(String(err.message || '')))) {
+          if (ttsAudioStop) return;
+          toast('⚠️ 浏览器拦截了自动播放，改用系统朗读');
+          try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+          ttsSpeakSystemChunks([text].concat(queue), doneMsg, 0.95);
+          return;
+        }
+        ui++; tryUrl();
+      });
     };
     tryUrl();
   };
@@ -1977,7 +2022,7 @@ function ttsSpeak(text, doneMsg, rate) {
   ttsAudioStop = false;
   if (!text) { toast('⚠️ 没有可朗读的内容'); return; }
   if (ttsUseSystem()) {
-    ttsSpeakSystemChunks(chunkText(text, 450), doneMsg, rate);
+    ttsSpeakSystemChunks(chunkText(text, isAndroidUA() ? 180 : 450), doneMsg, rate);
   } else {
     toast('🔊 正在朗读…');
     ttsSpeakAudioChunks(chunkText(text, 160), doneMsg);
