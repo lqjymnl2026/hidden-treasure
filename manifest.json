@@ -1,0 +1,16 @@
+{
+  "name": "隐藏的珍宝｜66卷圣经互动学习平台",
+  "short_name": "隐藏的珍宝",
+  "description": "从创世记到启示录，一卷一卷学，一章一章走：读经、观察、思考、回答、讨论、应用、祷告。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#3b3a6b",
+  "theme_color": "#3b3a6b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
