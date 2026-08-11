@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>隐藏的珍宝｜66卷圣经互动学习平台</title>
   <meta name="description" content="从创世记到启示录，一卷一卷学，一章一章走：一起读、一起问、一起讨论、一起应用。">
+    <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b3a6b">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
   <link rel="stylesheet" href="css/style.css?v=20260809-01">
 </head>
@@ -46,5 +49,8 @@
   <script src="js/data/games.js?v=20260809-01"></script>
   <!-- 应用层 -->
   <script src="js/app.js?v=20260811-02"></script>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
+</script>
 </body>
 </html>
