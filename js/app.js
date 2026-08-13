@@ -1811,6 +1811,7 @@ function renderDailyTreasure() {
       <button class="btn gold sm" onclick="shareVerseCard()">🖼️ 生成经文分享卡</button>
       <button class="btn ghost sm" onclick="randomChapter()">🎲 随机查经</button>
       <button class="btn ghost sm" onclick="speakVerse('daily')">🔊 朗读</button>
+      <button class="btn ghost sm" onclick="cycleTTSVoice(this)" title="切换朗读音色">🎙️ <span>${ttsVoiceLabel()}</span></button>
     </div>
   </div>`;
 }
@@ -1862,8 +1863,9 @@ window.shareVerseCard = function () {
 };
 /* ============================================================
  * 🔊 朗读引擎（兼容安卓 / 苹果 / 电脑）
- * 系统语音优先；安卓或系统无中文语音时自动改用网络音频朗读，
- * 网络音频不可用时自动回退系统朗读。再次点击同一按钮可停止。
+ * Edge 神经语音（晓晓/云希）优先；失败自动回退 百度/有道/谷歌 网络音频，
+ * 再回退系统朗读。点击「🎙️ 晓晓/云希」按钮可切换音色或改回系统朗读。
+ * 再次点击同一按钮可停止。
  * ============================================================ */
 let ttsAudioEl = null;      // 当前网络音频播放器
 let ttsAudioQueue = [];     // 剩余待播文本
@@ -1979,6 +1981,108 @@ function ttsAudioUrls(text) {
     'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=' + encodeURIComponent(text)
   ];
 }
+
+/* ============================================================
+ * 🎙️ Edge 神经语音（晓晓 / 云希）
+ * 调用微软 Edge 神经语音的免费中转接口，音质自然流畅；
+ * 失败时自动回退 百度/有道/谷歌 网络音频，再回退系统朗读。
+ * ============================================================ */
+const TTS_EDGE_ENDPOINTS = [
+  { url: 'https://tts.wangwangit.com/v1/audio/speech' }
+];
+const TTS_EDGE_VOICES = {
+  'zh-CN-XiaoxiaoNeural': '晓晓',
+  'zh-CN-YunxiNeural': '云希'
+};
+function ttsNeuralOn() {
+  try { return localStorage.getItem('ttsNeural') !== '0'; } catch (e) { return true; }
+}
+function ttsVoicePref() {
+  try { const v = localStorage.getItem('ttsVoice'); if (v && TTS_EDGE_VOICES[v]) return v; } catch (e) {}
+  return 'zh-CN-XiaoxiaoNeural';
+}
+function ttsVoiceName() { return TTS_EDGE_VOICES[ttsVoicePref()] || '晓晓'; }
+function ttsVoiceLabel() { return ttsNeuralOn() ? ttsVoiceName() : '系统'; }
+/* 点击「🎙️ 晓晓/云希」按钮：晓晓 → 云希 → 系统朗读 → 晓晓 */
+window.cycleTTSVoice = function (btn) {
+  const order = ['zh-CN-XiaoxiaoNeural', 'zh-CN-YunxiNeural', 'system'];
+  const cur = ttsNeuralOn() ? ttsVoicePref() : 'system';
+  let idx = order.indexOf(cur);
+  if (idx < 0) idx = 0;
+  const next = order[(idx + 1) % order.length];
+  try {
+    if (next === 'system') {
+      localStorage.setItem('ttsNeural', '0');
+      toast('🔊 已切换为系统朗读');
+    } else {
+      localStorage.setItem('ttsNeural', '1');
+      localStorage.setItem('ttsVoice', next);
+      toast('🎙️ 已切换为 Edge 神经语音：' + TTS_EDGE_VOICES[next]);
+    }
+  } catch (e) {}
+  if (btn) {
+    const sp = btn.querySelector('span') || btn;
+    sp.textContent = next === 'system' ? '系统' : TTS_EDGE_VOICES[next];
+  }
+};
+function ttsEdgeFetch(text, voice, speed) {
+  const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 8000) : null;
+  return fetch(TTS_EDGE_ENDPOINTS[0].url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      input: text,
+      voice: voice,
+      speed: (typeof speed === 'number' && speed > 0.5 && speed <= 2) ? speed : 1.0
+    }),
+    signal: ctrl ? ctrl.signal : undefined
+  }).then(function (r) {
+    if (!r.ok) throw new Error('edge-tts http ' + r.status);
+    return r.blob();
+  }).then(function (blob) {
+    if (!blob || !blob.size) throw new Error('edge-tts empty');
+    return URL.createObjectURL(blob);
+  }).finally(function () { if (timer) clearTimeout(timer); });
+}
+/* 用 Edge 神经语音逐段朗读；任一段失败即回退备用网络音频 */
+function ttsSpeakEdgeChunks(chunks, doneMsg, speed) {
+  if (!chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+  const queue = chunks.slice();
+  const voice = ttsVoicePref();
+  const fail = function (text, rest) {
+    if (ttsAudioStop) return;
+    toast('⚠️ 神经语音不可用，改用备用网络音频');
+    ttsSpeakAudioChunks([text].concat(rest), doneMsg);
+  };
+  const playNext = function () {
+    if (ttsAudioStop) return;
+    if (!queue.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
+    const text = queue.shift();
+    ttsEdgeFetch(text, voice, speed).then(function (url) {
+      if (ttsAudioStop) { if (url) URL.revokeObjectURL(url); return; }
+      const a = new Audio();
+      ttsAudioEl = a;
+      a.src = url;
+      a.onended = function () { if (ttsAudioEl === a) ttsAudioEl = null; if (url) URL.revokeObjectURL(url); playNext(); };
+      a.onerror = function () { if (ttsAudioEl === a) ttsAudioEl = null; if (url) URL.revokeObjectURL(url); fail(text, queue); };
+      a.play().catch(function (err) {
+        if (ttsAudioEl === a) ttsAudioEl = null;
+        if (url) URL.revokeObjectURL(url);
+        if (err && (err.name === 'NotAllowedError' || /autoplay|user gesture|interrupt/i.test(String((err && err.message) || '')))) {
+          if (ttsAudioStop) return;
+          toast('⚠️ 浏览器拦截了自动播放，改用系统朗读');
+          try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+          ttsSpeakSystemChunks([text].concat(queue), doneMsg, 0.95);
+          return;
+        }
+        fail(text, queue);
+      });
+    }).catch(function () { fail(text, queue); });
+  };
+  playNext();
+}
+
 function ttsSpeakAudioChunks(chunks, doneMsg) {
   if (!chunks.length) { toast(doneMsg || '🔊 朗读完毕'); return; }
   const queue = chunks.slice();
@@ -2022,8 +2126,13 @@ function ttsSpeak(text, doneMsg, rate) {
   ttsAudioStop = false;
   try { if (window.speechSynthesis) window.speechSynthesis.resume(); } catch (e) {}
   if (!text) { toast('⚠️ 没有可朗读的内容'); return; }
-  if (ttsUseSystem()) {
-    ttsSpeakSystemChunks(chunkText(text, isAndroidUA() ? 180 : 450), doneMsg, rate);
+  const chunks = chunkText(text, isAndroidUA() ? 200 : 300);
+  if (ttsNeuralOn()) {
+    // 🎙️ Edge 神经语音优先（晓晓/云希）；失败自动回退 百度/有道/谷歌 → 系统
+    toast('🎙️ ' + ttsVoiceLabel() + ' 正在朗读…');
+    ttsSpeakEdgeChunks(chunks, doneMsg, rate);
+  } else if (ttsUseSystem()) {
+    ttsSpeakSystemChunks(chunks, doneMsg, rate);
   } else {
     toast('🔊 正在朗读…');
     ttsSpeakAudioChunks(chunkText(text, 160), doneMsg);
@@ -2260,6 +2369,7 @@ function readingSection(b, num, qKey, lesson) {
     <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn gold sm read-btn" onclick="markRead(this,'${qKey}')">✓ 我读完了这一章</button>
       <button class="btn ghost sm" onclick="speakChapter('${qKey}')">🔊 朗读全文</button>
+      <button class="btn ghost sm" onclick="cycleTTSVoice(this)" title="切换朗读音色（晓晓/云希/系统）">🎙️ <span>${ttsVoiceLabel()}</span></button>
     </div>
     <div class="feedback ok" id="fb-read-${qKey}" style="margin-top:12px"><span class="fb-emoji">📖</span> 读经是查经的基础。读完本章，再进入下面的讲解与互动。</div>
   </div>`;
