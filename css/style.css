@@ -751,3 +751,14 @@ input, textarea { font-family: inherit; }
   .kids-tabs { top: 0; }
   .fill-sentence { font-size: 20px; }
 }
+
+/* ---------- 学习伙伴平台（读书吧 / 学课互动乐园） ---------- */
+.partner-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.partner-card { display: flex; align-items: center; gap: 14px; padding: 20px; text-decoration: none; }
+.partner-card .partner-emoji { font-size: 38px; line-height: 1; }
+.partner-card .partner-info { flex: 1; min-width: 0; }
+.partner-card .partner-name { font-weight: 800; font-size: 18px; margin-bottom: 3px; }
+.partner-card .partner-desc { color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+.partner-card .partner-go { white-space: nowrap; background: linear-gradient(135deg, #c9a24b, #b38736); color: #fff; padding: 7px 15px; border-radius: 999px; font-weight: 800; font-size: 14.5px; }
+.partner-card:hover { transform: translateY(-2px); }
+@media (max-width: 720px) { .partner-grid { grid-template-columns: 1fr; } }
