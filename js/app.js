@@ -236,6 +236,32 @@ function renderHome(app) {
 
     <div class="section">
       <div class="section-head">
+        <h2>📚 学习伙伴平台</h2>
+        <span class="sub">读书吧 · 互动课程 与 学课互动乐园（姊妹平台）</span>
+        <a class="more" href="https://lqjymnl2026.github.io/du-shu-ba/" target="_blank" rel="noopener">读书吧 →</a>
+      </div>
+      <div class="partner-grid">
+        <a class="card partner-card" href="https://lqjymnl2026.github.io/du-shu-ba/" target="_blank" rel="noopener">
+          <div class="partner-emoji">🎧</div>
+          <div class="partner-info">
+            <div class="partner-name">读书吧 · 互动课程</div>
+            <div class="partner-desc">初级互动乐园 · 有声读书吧（历代斗争丛书）· A/B/C/D 年 208 课 · 云端 AI 朗读（晓晓/云希）</div>
+          </div>
+          <span class="partner-go">前往 →</span>
+        </a>
+        <a class="card partner-card" href="https://lqjymnl2026.github.io/chuji-xueke/" target="_blank" rel="noopener">
+          <div class="partner-emoji">🧸</div>
+          <div class="partner-info">
+            <div class="partner-name">学课互动乐园 · 初级学课</div>
+            <div class="partner-desc">听故事 · 背存心节 · 玩游戏 · 涂色乐园 · 集星星 · 领证书</div>
+          </div>
+          <span class="partner-go">前往 →</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
         <h2>❤️ 圣经主题地图</h2>
         <span class="sub">主题是横向学习：看「爱、信心、苦难……」如何贯穿全本圣经</span>
         <a class="more" href="#/themes">全部主题 →</a>
@@ -1777,6 +1803,8 @@ function renderFooter() {
         <a class="tag-link" href="#/kids">🧒 儿童乐园</a>
         <a class="tag-link" href="#/games">🎮 趣味乐园</a>
         <a class="tag-link" href="#/progress">🗺️ 我的旅程</a>
+        <a class="tag-link" href="https://lqjymnl2026.github.io/du-shu-ba/" target="_blank" rel="noopener">🎧 读书吧</a>
+        <a class="tag-link" href="https://lqjymnl2026.github.io/chuji-xueke/" target="_blank" rel="noopener">🧸 初级学课</a>
         <a class="tag-link" href="./index.html">💎 返回首页</a>
       </div>
       <div style="margin-top:12px;opacity:.8">数据仅供学习参考 · 圣经经文请以纸质/权威译本为准</div>
