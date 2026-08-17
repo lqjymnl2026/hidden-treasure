@@ -1955,7 +1955,7 @@ function renderDoctrine(app) {
     <div class="doctrine-hero">
       <div style="font-size:46px">📜</div>
       <h1>圣经要道测验 · 闯关</h1>
-      <p>41 课问答式要道，一课一关：选择题、经文填空（答对得分）与问答题（看答案学习）；可朗读、可闯关、可解锁。从「圣经是神的话」学到「满有慈爱的神」。</p>
+      <p>41 课问答式要道，一课一关，全部都是选择题与经文填空：点选即判分、即时看讲解；可朗读、可闯关、可解锁。从「圣经是神的话」学到「满有慈爱的神」。</p>
       <div class="doctrine-stats">
         <span>✅ 已完成 ${p.done} / ${p.total} 关</span>
         <span>🚩 闯关进度 ${pct}%</span>
@@ -1968,7 +1968,7 @@ function renderDoctrine(app) {
     </div>
     <div class="doctrine-grid">${cards}</div>
     <div class="card" style="margin-top:22px;padding:18px;text-align:center;color:var(--muted)">
-      💡 选择题/经文填空答对得分；问答题点「显示答案」学习。点 🔊 用晓晓/云希朗读题目与答案。<br>
+      💡 全部为选择题/经文填空：点选即判分并显示讲解。点 🔊 用晓晓/云希朗读题目与答案。<br>
       <button class="btn ghost sm" style="margin-top:10px" onclick="doctrineResetAll()">🗑️ 清空要道测验进度</button>
     </div>
   </div>`;
