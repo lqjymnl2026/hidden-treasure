@@ -13,7 +13,8 @@ const store = {
   quiz: {},         // 'book.ch' -> 最佳挑战得分
   points: 0,        // 我的珍宝值
   reading: {},      // 'book.ch' -> { times, last, first }
-  footprints: []    // 足迹记录
+  footprints: [],   // 足迹记录
+  doctrine: {}      // 要道测验：lessonId -> { done, stars, score, total, ok, viewed }
 };
 function loadStore() {
   try {
@@ -116,7 +117,7 @@ function navigate(path) { location.hash = '#/' + path; }
 function render() {
   const { path, parts } = parseHash();
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-  const navMap = { home: 'nav-home', books: 'nav-books', themes: 'nav-themes', people: 'nav-people', progress: 'nav-progress', modes: 'nav-modes', kids: 'nav-kids', games: 'nav-games' };
+  const navMap = { home: 'nav-home', books: 'nav-books', themes: 'nav-themes', people: 'nav-people', progress: 'nav-progress', modes: 'nav-modes', kids: 'nav-kids', games: 'nav-games', doctrine: 'nav-doctrine' };
   if (navMap[path]) {
     const el = document.getElementById(navMap[path]);
     if (el) el.classList.add('active');
@@ -137,6 +138,7 @@ function render() {
     case 'modes': return renderModes(app);
     case 'kids': return renderKids(app);
     case 'games': return renderGames(app);
+    case 'doctrine': return parts[1] ? renderDoctrineLesson(app, parseInt(parts[1], 10)) : renderDoctrine(app);
     case 'start': return renderStart(app);
     default: return renderHome(app);
   }
@@ -232,6 +234,22 @@ function renderHome(app) {
         <a class="more" href="#/games">进入趣味乐园 →</a>
       </div>
       ${renderFunGrid()}
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>📜 圣经要道测验</h2>
+        <span class="sub">41 课问答式要道 · 闯关解锁 · 可朗读 · 可看答案</span>
+        <a class="more" href="#/doctrine">进入闯关 →</a>
+      </div>
+      <a class="card partner-card" href="#/doctrine" style="text-decoration:none">
+        <div class="partner-emoji">📜</div>
+        <div class="partner-info">
+          <div class="partner-name">圣经要道测验 · 问答式 41 课</div>
+          <div class="partner-desc">从「圣经是神的话」到「满有慈爱的神」：选择题、问答题、经文填空，一课一关闯关式学习，答案与讲解即时可见，还能用晓晓/云希朗读。</div>
+        </div>
+        <span class="partner-go">开始闯关 →</span>
+      </a>
     </div>
 
     <div class="section">
@@ -1776,7 +1794,8 @@ function renderFunGrid() {
   const cards = [
     { emoji: '🧒', name: '儿童乐园', desc: '圣经故事 · 金句拼拼 · 智慧问答 · 贴纸墙', href: '#/kids', tag: '亲子 · 儿童' },
     { emoji: '🧩', name: '金句拼拼看', desc: '把打乱的词组拼回一句经文，记住神的话', href: '#/games', tag: '记忆 · 游戏' },
-    { emoji: '🎯', name: '快问快答', desc: '12道趣味圣经知识题，答完看评分', href: '#/games', tag: '挑战 · 竞答' }
+    { emoji: '🎯', name: '快问快答', desc: '12道趣味圣经知识题，答完看评分', href: '#/games', tag: '挑战 · 竞答' },
+    { emoji: '📜', name: '圣经要道测验', desc: '41课问答式要道闯关：互动问答 · 朗读 · 看答案', href: '#/doctrine', tag: '要道 · 闯关' }
   ];
   return `<div class="mode-grid fun-grid">` + cards.map(c =>
     `<a class="card mode-card" href="${c.href}">
@@ -1787,7 +1806,229 @@ function renderFunGrid() {
     </a>`).join('') + `</div>`;
 }
 
+/* ============================================================
+ * 📜 圣经要道测验（闯关式互动问答 · 41课）
+ * 选择题/经文填空 = 得分闯关；问答题 = 显示答案学习。
+ * 进度保存在本机，完成一关自动解锁下一关。
+ * ============================================================ */
+function doctrineProgress() {
+  const d = store.doctrine || {};
+  const done = DOCTRINE_LESSONS.filter(l => d[l.id] && d[l.id].done).length;
+  return { done: done, total: DOCTRINE_LESSONS.length, data: d };
+}
+function doctrineRec(id) {
+  store.doctrine = store.doctrine || {};
+  if (!store.doctrine[id]) store.doctrine[id] = { ok: {}, viewed: {}, score: 0, total: 0, stars: 0, done: false };
+  return store.doctrine[id];
+}
+function doctrineScoreable(l) { return l.questions.filter(q => q.t === 'c' || q.t === 'fill'); }
+function doctrineUnlocked(id) {
+  if (id === 1) return true;
+  const d = store.doctrine || {};
+  return !!(d[id - 1] && d[id - 1].done);
+}
+function doctrineStars(id) { const d = (store.doctrine || {})[id]; return d ? (d.stars || 0) : 0; }
+function doctrineCheckDone(id) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) return;
+  const rec = doctrineRec(id);
+  const scoreable = doctrineScoreable(l);
+  const allOk = scoreable.every(q => rec.ok[q.q]);
+  const allViewed = l.questions.filter(q => q.t === 'qa').every(q => rec.viewed[q.q]);
+  if (allOk && allViewed) {
+    const ratio = scoreable.length ? rec.score / scoreable.length : 0;
+    const stars = ratio >= 0.8 ? 3 : ratio >= 0.5 ? 2 : 1;
+    if (!rec.done) {
+      rec.done = true;
+      rec.stars = Math.max(rec.stars, stars);
+      saveStore();
+      toast('🎉 本课完成！解锁下一关');
+      const el = document.getElementById('dq-done');
+      if (el) el.style.display = 'block';
+    }
+  }
+}
+function doctrineMarkScore(id) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) return;
+  const rec = doctrineRec(id);
+  const scoreable = doctrineScoreable(l);
+  let score = 0;
+  scoreable.forEach(q => { if (rec.ok[q.q]) score++; });
+  rec.score = score;
+  rec.total = scoreable.length;
+  const num = document.getElementById('dq-score-num');
+  if (num) num.textContent = score;
+  const ratio = scoreable.length ? score / scoreable.length : 0;
+  const stars = ratio >= 0.8 ? 3 : ratio >= 0.5 ? 2 : 1;
+  const st = document.getElementById('dq-stars');
+  if (st) st.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+}
+window.doctrinePick = function (id, qi, oi, el) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) return;
+  const q = l.questions[qi];
+  if (q.t !== 'c' && q.t !== 'fill') return;
+  const rec = doctrineRec(id);
+  if (rec.ok[q.q]) return; // 已答对
+  const card = el.closest('.dq-card');
+  const opts = card.querySelectorAll('.dq-opt');
+  opts.forEach((o, i) => {
+    o.disabled = true;
+    if (i === q.a) o.classList.add('right');
+    if (i === oi && oi !== q.a) o.classList.add('wrong');
+  });
+  const fb = document.getElementById('dq-fb-' + id + '-' + qi);
+  if (oi === q.a) {
+    rec.ok[q.q] = true;
+    rec.viewed[q.q] = true;
+    fb.className = 'dq-fb show ok';
+    fb.innerHTML = '✅ 回答正确！' + (q.why ? ' <br>' + esc(q.why) : '') + '<div class="dq-read"><button class="btn ghost sm" onclick="doctrineSpeak(' + id + ',' + qi + ')">🔊 朗读</button></div>';
+    toast('✅ 答对了');
+  } else {
+    rec.viewed[q.q] = true;
+    fb.className = 'dq-fb show bad';
+    fb.innerHTML = '❌ 答错了。正确答案：' + esc(q.o[q.a]) + (q.why ? '<br>' + esc(q.why) : '') + '<div class="dq-read"><button class="btn ghost sm" onclick="doctrineSpeak(' + id + ',' + qi + ')">🔊 朗读</button></div>';
+    toast('❌ 再想想，看讲解');
+  }
+  doctrineMarkScore(id);
+  saveStore();
+  doctrineCheckDone(id);
+};
+window.doctrineShowAnswer = function (id, qi, btn) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) return;
+  const q = l.questions[qi];
+  const rec = doctrineRec(id);
+  rec.viewed[q.q] = true;
+  const box = document.getElementById('dq-ans-' + id + '-' + qi);
+  if (box) box.classList.add('show');
+  if (btn) btn.style.display = 'none';
+  saveStore();
+  doctrineCheckDone(id);
+};
+window.doctrineSpeak = function (id, qi, isAns) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) return;
+  const q = l.questions[qi];
+  let text = '第' + (qi + 1) + '题。' + q.q;
+  if (isAns) text += '。答案：' + (q.a || (q.o ? q.o[q.a] : ''));
+  if (!isAns && q.why && q.t === 'qa') text += '。提示：' + q.why;
+  ttsSpeak(text, '🔊 朗读完毕', 0.95);
+};
+window.doctrineSpeakIntro = function (id) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) return;
+  ttsSpeak('第' + id + '关，' + l.title + '。' + l.intro, '🔊 朗读完毕', 0.95);
+};
+window.doctrineReset = function (id) {
+  if (store.doctrine) delete store.doctrine[id];
+  saveStore();
+  renderDoctrineLesson(document.getElementById('app'), id);
+};
+window.doctrineResetAll = function () {
+  if (!confirm('确定要清空全部要道测验进度吗？')) return;
+  store.doctrine = {};
+  saveStore();
+  renderDoctrine(document.getElementById('app'));
+};
+
+function renderDoctrine(app) {
+  const p = doctrineProgress();
+  const cards = DOCTRINE_LESSONS.map(l => {
+    const unlocked = doctrineUnlocked(l.id);
+    const stars = doctrineStars(l.id);
+    const rec = (store.doctrine || {})[l.id];
+    const done = !!(rec && rec.done);
+    const starStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    const cls = (done ? ' done' : '') + (unlocked ? '' : ' locked');
+    return `<a class="doctrine-card${cls}" href="#/doctrine/${l.id}">
+      <div class="dc-top"><span class="dc-no">第 ${l.id} 关</span><span class="dc-emoji">${unlocked ? l.emoji : '🔒'}</span></div>
+      <h3>${esc(l.title)}</h3>
+      <span class="dc-theme">${esc(l.theme)}</span>
+      <div class="dc-stars">${done ? starStr : (unlocked ? '✨ 未完成' : '🔒 完成上一关解锁')}</div>
+    </a>`;
+  }).join('');
+  const pct = p.total ? Math.round(p.done / p.total * 100) : 0;
+  app.innerHTML = `
+  <div class="container" style="padding-top:40px">
+    <div class="doctrine-hero">
+      <div style="font-size:46px">📜</div>
+      <h1>圣经要道测验 · 闯关</h1>
+      <p>41 课问答式要道，一课一关：选择题、经文填空（答对得分）与问答题（看答案学习）；可朗读、可闯关、可解锁。从「圣经是神的话」学到「满有慈爱的神」。</p>
+      <div class="doctrine-stats">
+        <span>✅ 已完成 ${p.done} / ${p.total} 关</span>
+        <span>🚩 闯关进度 ${pct}%</span>
+      </div>
+    </div>
+    <div class="section-head">
+      <h2>🗺️ 关卡地图</h2>
+      <span class="sub">完成一关，自动解锁下一关</span>
+      <a class="more" href="#/modes">四种查经模式 →</a>
+    </div>
+    <div class="doctrine-grid">${cards}</div>
+    <div class="card" style="margin-top:22px;padding:18px;text-align:center;color:var(--muted)">
+      💡 选择题/经文填空答对得分；问答题点「显示答案」学习。点 🔊 用晓晓/云希朗读题目与答案。<br>
+      <button class="btn ghost sm" style="margin-top:10px" onclick="doctrineResetAll()">🗑️ 清空要道测验进度</button>
+    </div>
+  </div>`;
+}
+
+function renderDoctrineLesson(app, id) {
+  const l = DOCTRINE_LESSONS.find(x => x.id === id);
+  if (!l) {
+    app.innerHTML = '<div class="container" style="padding-top:40px"><div class="card" style="padding:30px;text-align:center">未找到这一关。<br><a class="btn gold" href="#/doctrine">返回要道测验</a></div></div>';
+    return;
+  }
+  const rec = doctrineRec(l.id);
+  const key = 'ABCDEFGH';
+  const qCards = l.questions.map((q, i) => {
+    const no = i + 1;
+    if (q.t === 'c' || q.t === 'fill') {
+      const opts = q.o.map((op, oi) => `<button class="dq-opt" data-o="${oi}" onclick="doctrinePick(${l.id},${i},${oi},this)">
+        <span class="dq-key">${key[oi]}</span><span>${esc(op)}</span></button>`).join('');
+      return `<div class="dq-card">
+        <div class="dq-q"><span class="dq-no">Q${no}.</span>${esc(q.q)}${q.ref ? ' <small style="color:var(--muted)">（' + esc(q.ref) + '）</small>' : ''}
+          <button class="btn ghost sm dq-readbtn" onclick="doctrineSpeak(${l.id},${i})">🔊</button></div>
+        <div class="dq-opts">${opts}</div>
+        <div class="dq-fb" id="dq-fb-${l.id}-${i}"></div>
+      </div>`;
+    }
+    return `<div class="dq-card">
+      <div class="dq-q"><span class="dq-no">Q${no}.</span>${esc(q.q)}
+        <button class="btn ghost sm dq-readbtn" onclick="doctrineSpeak(${l.id},${i})">🔊</button></div>
+      <button class="btn gold sm" onclick="doctrineShowAnswer(${l.id},${i},this)">💡 显示答案</button>
+      <div class="dq-qa-ans" id="dq-ans-${l.id}-${i}"><b>答案：</b>${esc(q.a)}${q.why ? '<br><br><b>讲解：</b>' + esc(q.why) : ''}
+        <div class="dq-read" style="margin-top:8px"><button class="btn ghost sm" onclick="doctrineSpeak(${l.id},${i},true)">🔊 朗读答案</button></div>
+      </div>
+    </div>`;
+  }).join('');
+  const prev = id > 1 ? `<a class="btn ghost" href="#/doctrine/${id - 1}">← 上一关</a>` : '';
+  const next = id < DOCTRINE_LESSONS.length ? `<a class="btn ghost" href="#/doctrine/${id + 1}">下一关 →</a>` : '';
+  const doneBox = rec.done ? '<div class="card" id="dq-done" style="margin-bottom:16px;padding:16px;text-align:center;border-color:var(--ok);background:#e9f7f0"><b style="color:var(--ok)">🎉 本关已完成 · ⭐' + '⭐'.repeat(rec.stars || 0) + '☆'.repeat(3 - (rec.stars || 0)) + '</b><br><a class="btn gold sm" style="margin-top:8px" href="#/doctrine/' + (id + 1) + '">解锁下一关 →</a></div>' : '<div class="card" id="dq-done" style="display:none;margin-bottom:16px;padding:16px;text-align:center;border-color:var(--ok);background:#e9f7f0"><b style="color:var(--ok)">🎉 本课完成！</b><br><a class="btn gold sm" style="margin-top:8px" href="#/doctrine/' + (id + 1) + '">解锁下一关 →</a></div>';
+  app.innerHTML = `
+  <div class="container" style="padding-top:40px">
+    <a class="btn ghost sm" href="#/doctrine">📜 返回要道测验</a>
+    <div class="doctrine-lesson-head" style="margin-top:12px">
+      <div class="dl-top"><span>第 ${l.id} 关 / 共 ${DOCTRINE_LESSONS.length} 关</span><span>${l.emoji} ${esc(l.theme)}</span></div>
+      <h1>${l.emoji} ${esc(l.title)}</h1>
+      <p>${esc(l.intro)}</p>
+      <div class="dl-actions">
+        <button class="btn gold sm" onclick="doctrineSpeakIntro(${l.id})">🔊 朗读本课导言</button>
+        <button class="btn ghost sm" onclick="doctrineReset(${l.id})">🔄 重新开始</button>
+        ${rec.score !== undefined && rec.total ? '<span class="btn sm" style="background:#fff;color:var(--indigo);border:1.5px solid var(--indigo);pointer-events:none">🏆 最佳得分 ' + rec.score + '/' + rec.total + '</span>' : ''}
+      </div>
+    </div>
+    ${doneBox}
+    <div class="dq-score">📊 得分：<b id="dq-score-num">0</b> / ${doctrineScoreable(l).length} 题 · ⭐ <span id="dq-stars">☆☆☆</span></div>
+    ${qCards}
+    <div class="dq-nav">${prev}${next}<a class="btn gold" href="#/doctrine">🗺️ 关卡地图</a></div>
+  </div>`;
+  doctrineMarkScore(l.id);
+}
+
 /* ---------- 页脚 ---------- */
+
 function renderFooter() {
   return `
   <footer class="footer">
@@ -1802,6 +2043,7 @@ function renderFooter() {
         <a class="tag-link" href="#/modes">🧭 四种查经模式</a>
         <a class="tag-link" href="#/kids">🧒 儿童乐园</a>
         <a class="tag-link" href="#/games">🎮 趣味乐园</a>
+        <a class="tag-link" href="#/doctrine">📜 要道测验</a>
         <a class="tag-link" href="#/progress">🗺️ 我的旅程</a>
         <a class="tag-link" href="https://lqjymnl2026.github.io/du-shu-ba/" target="_blank" rel="noopener">🎧 读书吧</a>
         <a class="tag-link" href="https://lqjymnl2026.github.io/chuji-xueke/" target="_blank" rel="noopener">🧸 初级学课</a>
