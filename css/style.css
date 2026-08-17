@@ -762,3 +762,53 @@ input, textarea { font-family: inherit; }
 .partner-card .partner-go { white-space: nowrap; background: linear-gradient(135deg, #c9a24b, #b38736); color: #fff; padding: 7px 15px; border-radius: 999px; font-weight: 800; font-size: 14.5px; }
 .partner-card:hover { transform: translateY(-2px); }
 @media (max-width: 720px) { .partner-grid { grid-template-columns: 1fr; } }
+
+/* ============================================================
+ * 📜 圣经要道测验（闯关式互动问答）
+ * ============================================================ */
+.doctrine-hero { background: linear-gradient(135deg,#3b3a6b,#6a4f9e 55%,#9a6bb8); color:#fff; border-radius:18px; padding:28px 22px; text-align:center; margin-bottom:22px; }
+.doctrine-hero h1 { font-size:26px; margin:8px 0 6px; }
+.doctrine-hero p { color:rgba(255,255,255,.85); font-size:15px; line-height:1.8; max-width:640px; margin:0 auto; }
+.doctrine-stats { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
+.doctrine-stats span { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25); padding:6px 14px; border-radius:999px; font-size:14px; }
+.doctrine-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+.doctrine-card { position:relative; border-radius:16px; padding:18px; text-decoration:none; color:var(--ink); overflow:hidden; border:1.5px solid var(--line); background:#fff; transition:transform .2s, box-shadow .2s; display:block; }
+.doctrine-card:hover { transform:translateY(-3px); box-shadow:0 10px 26px rgba(59,74,122,.18); }
+.doctrine-card .dc-top { display:flex; justify-content:space-between; align-items:center; }
+.doctrine-card .dc-no { font-size:13px; font-weight:800; color:var(--muted); }
+.doctrine-card .dc-emoji { font-size:38px; line-height:1; }
+.doctrine-card h3 { margin:10px 0 4px; font-size:18px; }
+.doctrine-card .dc-theme { display:inline-block; font-size:13px; padding:2px 10px; border-radius:999px; background:var(--cream); color:var(--indigo); border:1px solid var(--line); }
+.doctrine-card .dc-stars { color:#e0a72f; font-size:15px; margin-top:8px; }
+.doctrine-card.locked { opacity:.6; filter:saturate(.35); }
+.doctrine-card.done { border-color:var(--ok); }
+.doctrine-lesson-head { background:linear-gradient(135deg,#3b3a6b,#6a4f9e 55%,#9a6bb8); color:#fff; border-radius:18px; padding:24px 20px; margin-bottom:16px; }
+.doctrine-lesson-head .dl-top { display:flex; justify-content:space-between; align-items:center; font-size:14px; opacity:.9; }
+.doctrine-lesson-head h1 { font-size:24px; margin:8px 0 4px; }
+.doctrine-lesson-head p { color:rgba(255,255,255,.88); font-size:14.5px; line-height:1.8; }
+.doctrine-lesson-head .dl-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.dq-card { background:#fff; border:1.5px solid var(--line); border-radius:16px; padding:18px; margin-bottom:14px; }
+.dq-card .dq-q { font-size:17px; font-weight:700; line-height:1.7; margin-bottom:12px; }
+.dq-card .dq-q .dq-no { color:var(--gold-deep); margin-right:4px; }
+.dq-readbtn { margin-left:8px; }
+.dq-opts { display:flex; flex-direction:column; gap:10px; }
+.dq-opt { display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid var(--line); border-radius:12px; background:#fafafc; font-size:16px; cursor:pointer; transition:all .15s; text-align:left; width:100%; }
+.dq-opt:hover:not(:disabled) { border-color:var(--indigo); background:#fff; }
+.dq-opt .dq-key { flex:0 0 28px; height:28px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+.dq-opt.right { border-color:var(--ok); background:#e9f7f0; }
+.dq-opt.right .dq-key { background:var(--ok); }
+.dq-opt.wrong { border-color:#d9534f; background:#fdeeee; }
+.dq-opt.wrong .dq-key { background:#d9534f; }
+.dq-opt:disabled { cursor:default; }
+.dq-fb { margin-top:12px; padding:12px 14px; border-radius:12px; font-size:15px; line-height:1.8; display:none; }
+.dq-fb.show { display:block; }
+.dq-fb.ok { background:#e9f7f0; border:1px solid var(--ok); }
+.dq-fb.bad { background:#fdeeee; border:1px solid #d9534f; }
+.dq-fb .dq-read { margin-top:6px; }
+.dq-qa-ans { margin-top:12px; padding:14px; border-radius:12px; background:var(--cream); border:1px dashed var(--gold-deep); display:none; line-height:1.9; font-size:15.5px; }
+.dq-qa-ans.show { display:block; }
+.dq-qa-ans b { color:var(--indigo); }
+.dq-score { text-align:center; padding:16px; border-radius:16px; border:1.5px dashed var(--gold-deep); background:var(--cream); margin-bottom:16px; font-size:16px; }
+.dq-score b { font-size:24px; color:var(--indigo); }
+.dq-nav { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:20px; }
+@media (max-width:720px){ .doctrine-grid { grid-template-columns:1fr; } }
