@@ -1816,6 +1816,8 @@ function doctrineProgress() {
   const done = DOCTRINE_LESSONS.filter(l => d[l.id] && d[l.id].done).length;
   return { done: done, total: DOCTRINE_LESSONS.length, data: d };
 }
+/* 运行时：渲染时打乱的选项（id:qi -> {o, a}） */
+window.__dqOpts = {};
 function doctrineRec(id) {
   store.doctrine = store.doctrine || {};
   if (!store.doctrine[id]) store.doctrine[id] = { ok: {}, viewed: {}, score: 0, total: 0, stars: 0, done: false };
@@ -1869,17 +1871,19 @@ window.doctrinePick = function (id, qi, oi, el) {
   if (!l) return;
   const q = l.questions[qi];
   if (q.t !== 'c' && q.t !== 'fill') return;
+  const st = window.__dqOpts[id + ':' + qi] || { o: q.o, a: q.a };
   const rec = doctrineRec(id);
   if (rec.ok[q.q]) return; // 已答对
   const card = el.closest('.dq-card');
   const opts = card.querySelectorAll('.dq-opt');
+  const correctIdx = st.a;
   opts.forEach((o, i) => {
     o.disabled = true;
-    if (i === q.a) o.classList.add('right');
-    if (i === oi && oi !== q.a) o.classList.add('wrong');
+    if (i === correctIdx) o.classList.add('right');
+    if (i === oi && oi !== correctIdx) o.classList.add('wrong');
   });
   const fb = document.getElementById('dq-fb-' + id + '-' + qi);
-  if (oi === q.a) {
+  if (oi === correctIdx) {
     rec.ok[q.q] = true;
     rec.viewed[q.q] = true;
     fb.className = 'dq-fb show ok';
@@ -1888,7 +1892,7 @@ window.doctrinePick = function (id, qi, oi, el) {
   } else {
     rec.viewed[q.q] = true;
     fb.className = 'dq-fb show bad';
-    fb.innerHTML = '❌ 答错了。正确答案：' + esc(q.o[q.a]) + (q.why ? '<br>' + esc(q.why) : '') + '<div class="dq-read"><button class="btn ghost sm" onclick="doctrineSpeak(' + id + ',' + qi + ')">🔊 朗读</button></div>';
+    fb.innerHTML = '❌ 答错了。正确答案：' + esc(st.o[correctIdx]) + (q.why ? '<br>' + esc(q.why) : '') + '<div class="dq-read"><button class="btn ghost sm" onclick="doctrineSpeak(' + id + ',' + qi + ')">🔊 朗读</button></div>';
     toast('❌ 再想想，看讲解');
   }
   doctrineMarkScore(id);
@@ -1985,7 +1989,9 @@ function renderDoctrineLesson(app, id) {
   const qCards = l.questions.map((q, i) => {
     const no = i + 1;
     if (q.t === 'c' || q.t === 'fill') {
-      const opts = q.o.map((op, oi) => `<button class="dq-opt" data-o="${oi}" onclick="doctrinePick(${l.id},${i},${oi},this)">
+      const so = shuffleArr(q.o);
+      window.__dqOpts[l.id + ':' + i] = { o: so, a: so.indexOf(q.o[q.a]) };
+      const opts = so.map((op, oi) => `<button class="dq-opt" data-o="${oi}" onclick="doctrinePick(${l.id},${i},${oi},this)">
         <span class="dq-key">${key[oi]}</span><span>${esc(op)}</span></button>`).join('');
       return `<div class="dq-card">
         <div class="dq-q"><span class="dq-no">Q${no}.</span>${esc(q.q)}${q.ref ? ' <small style="color:var(--muted)">（' + esc(q.ref) + '）</small>' : ''}
