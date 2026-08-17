@@ -255,7 +255,7 @@ function renderHome(app) {
     <div class="section">
       <div class="section-head">
         <h2>📚 学习伙伴平台</h2>
-        <span class="sub">读书吧 · 互动课程 与 学课互动乐园（姊妹平台）</span>
+        <span class="sub">读书吧 · 学课互动乐园 · 圣书智慧谜语（姊妹平台）</span>
         <a class="more" href="https://lqjymnl2026.github.io/du-shu-ba/" target="_blank" rel="noopener">读书吧 →</a>
       </div>
       <div class="partner-grid">
@@ -272,6 +272,14 @@ function renderHome(app) {
           <div class="partner-info">
             <div class="partner-name">学课互动乐园 · 初级学课</div>
             <div class="partner-desc">听故事 · 背存心节 · 玩游戏 · 涂色乐园 · 集星星 · 领证书</div>
+          </div>
+          <span class="partner-go">前往 →</span>
+        </a>
+        <a class="card partner-card" href="https://hljymnl.github.io/biblemy/" target="_blank" rel="noopener">
+          <div class="partner-emoji">🧩</div>
+          <div class="partner-info">
+            <div class="partner-name">圣书智慧谜语 · 闯关乐园</div>
+            <div class="partner-desc">66卷 · 每卷10关 · 谜语 + 问答约4万题 · 集星星 · 闯关乐园</div>
           </div>
           <span class="partner-go">前往 →</span>
         </a>
