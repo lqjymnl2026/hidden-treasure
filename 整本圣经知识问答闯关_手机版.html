@@ -332,9 +332,9 @@ function showAnswer(){
     if(picked!==null&&idx===picked&&picked!==correct)o.classList.add('wrong');
   });
   let html='';
-  if(right===true){score+=10+combo*2;combo++;sfxRight();
+  if(right===true){score+=10+combo*2;combo++;sfxRight();speakFeedback('答对了，太棒了！');
     html=`<div class="ans good"><b>✅ 答对了！+${10+(combo-1)*2}分</b></div>`;
-  }else if(right===false){combo=0;sfxWrong();
+  }else if(right===false){combo=0;sfxWrong();speakFeedback('继续加油，再想想！');
     html=`<div class="ans bad"><b>❌ 答错了</b> · 正确答案：${ansText(q)}</div>`;
   }else{html=`<div class="ans info"><b>🔍 答案：</b>${ansText(q)}</div>`;}
   html+=`<div class="ans info">💡 ${q.why}</div>`;
@@ -383,6 +383,18 @@ function tone(f,d,delay,vol){ensureAudio();note(f,d,AC.currentTime+delay,'sine',
 function sfxRight(){tone(660,.12,0);setTimeout(()=>tone(880,.18,0),110);}
 function sfxWrong(){tone(220,.28,0,.3);setTimeout(()=>tone(170,.32,0,.3),120);}
 function sfxLevel(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.22,0,.35),i*130));}
+function speakFeedback(text){
+  try{
+    if(!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='zh-CN'; u.rate=1.05; u.volume=1;
+    const vs=window.speechSynthesis.getVoices();
+    const v=vs.find(x=>/zh/i.test(x.lang)&&/xiaoxiao|tingting|meijia|huihui|female/i.test(x.name))||vs.find(x=>/zh/i.test(x.lang));
+    if(v) u.voice=v;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
 const CH=[[261.6,329.6,392],[196,246.9,293.7],[220,261.6,329.6],[174.6,220,261.6]];
 function loop(){ensureAudio();const t0=AC.currentTime+.05;CH.forEach((ch,c)=>{ch.forEach((f,k)=>note(f,2.4,t0+c*2.2+k*.02,'sine',.09));[0,1,2,1].forEach((s,i)=>note(ch[s],.5,t0+c*2.2+i*.28,'triangle',.05));});timer=setTimeout(loop,4*2.2*1000);}
 function toggleMute(){ensureAudio();musicOn=!musicOn;document.getElementById('muteBtn').textContent=musicOn?'🔊 音乐':'🔇 静音';if(master)master.gain.value=musicOn?.14:0;if(musicOn&&!timer)loop();}
