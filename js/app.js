@@ -1105,11 +1105,13 @@ window.checkQuiz = function (el, key) {
     const fb = document.getElementById('fb-' + q + '-' + key);
     if (fb) fb.classList.add('show');
     toast('🎉 回答正确！');
+    window.quizFeedback(true);
   } else {
     el.classList.add('wrong');
     const fb = document.getElementById('fb-' + q + '-wrong-' + key);
     if (fb) fb.classList.add('show');
     toast('🤔 再想一想，答案就在经文里');
+    window.quizFeedback(false);
   }
 };
 window.toggleSamples = function (key) {
@@ -1534,10 +1536,12 @@ window.kidsFillPick = function (oi) {
     opts[oi].classList.add('correct');
     if (fb) fb.innerHTML = '<div class="fill-ok">🎉 答对啦！「' + esc(item.options[oi]) + '」填得真棒！</div>';
     if (next) next.style.display = 'flex';
+    window.quizFeedback(true);
   } else {
     opts[oi].classList.add('wrong');
     if (fb) fb.innerHTML = '<div class="fill-bad">😅 再想一想，看看上面那句话哦～</div>';
     opts.forEach(o => { o.disabled = false; });
+    window.quizFeedback(false);
   }
 };
 window.kidsFillNext = function () {
@@ -1588,7 +1592,8 @@ function kidsQuizBody() {
 window.kidsQuizPick = function (qi, oi) {
   if (kidsQuizState.answered[qi] !== undefined) return;
   kidsQuizState.answered[qi] = oi;
-  if (oi === KIDS_QUIZ[qi].answer) kidsQuizState.score++;
+  if (oi === KIDS_QUIZ[qi].answer) { kidsQuizState.score++; window.quizFeedback(true); }
+  else { window.quizFeedback(false); }
   renderKidsBody();
   const all = Object.keys(kidsQuizState.answered).length === KIDS_QUIZ.length;
   if (all) {
@@ -1787,10 +1792,12 @@ window.quickPick = function (oi) {
     quickRun.score++;
     opts[oi].classList.add('correct');
     if (fb) fb.innerHTML = `<div class="fill-ok">✅ 答对啦！${esc(q.tip)}</div>`;
+    window.quizFeedback(true);
   } else {
     opts[oi].classList.add('wrong');
     opts[q.answer].classList.add('correct');
     if (fb) fb.innerHTML = `<div class="fill-bad">❌ 答案是「${esc(q.options[q.answer])}」。${esc(q.tip)}</div>`;
+    window.quizFeedback(false);
   }
   quickRun.done++;
   if (fb) fb.innerHTML += `<div style="margin-top:12px"><button class="btn gold sm" onclick="${quickRun.done === QUICK_QUESTIONS.length ? 'renderQuickQ()' : 'quickNext()'}">${quickRun.done === QUICK_QUESTIONS.length ? '🏁 查看成绩' : '➡️ 下一题'}</button></div>`;
@@ -1897,11 +1904,13 @@ window.doctrinePick = function (id, qi, oi, el) {
     fb.className = 'dq-fb show ok';
     fb.innerHTML = '✅ 回答正确！' + (q.why ? ' <br>' + esc(q.why) : '') + '<div class="dq-read"><button class="btn ghost sm" onclick="doctrineSpeak(' + id + ',' + qi + ')">🔊 朗读</button></div>';
     toast('✅ 答对了');
+    window.quizFeedback(true);
   } else {
     rec.viewed[q.q] = true;
     fb.className = 'dq-fb show bad';
     fb.innerHTML = '❌ 答错了。正确答案：' + esc(st.o[correctIdx]) + (q.why ? '<br>' + esc(q.why) : '') + '<div class="dq-read"><button class="btn ghost sm" onclick="doctrineSpeak(' + id + ',' + qi + ')">🔊 朗读</button></div>';
     toast('❌ 再想想，看讲解');
+    window.quizFeedback(false);
   }
   doctrineMarkScore(id);
   saveStore();
@@ -2847,6 +2856,8 @@ window.submitQuiz = function (key) {
   if (submitBtn) submitBtn.outerHTML = result;
   wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   toast('📤 已提交，得分 ' + score + '/' + total);
+  if (score === total && wrong === 0) window.quizFeedback(true);
+  else if (wrong > 0 || unanswered > 0) window.quizFeedback(false);
 };
 
 /* ---------- 阅读经文（在线和合本简体） ---------- */
@@ -2972,6 +2983,42 @@ function initBgMusic() {
   };
   ['pointerdown', 'touchstart', 'keydown'].forEach(t => document.addEventListener(t, unlock));
 }
+
+/* ---------- 问答声效：答对 / 答错（叮咚+提示音 + 语音鼓励） ---------- */
+let quizAC = null, quizMaster = null;
+function quizAudio() {
+  if (!quizAC) {
+    try {
+      quizAC = new (window.AudioContext || window.webkitAudioContext)();
+      quizMaster = quizAC.createGain();
+      quizMaster.gain.value = 0.16;
+      quizMaster.connect(quizAC.destination);
+    } catch (e) { return null; }
+  }
+  if (quizAC && quizAC.state === 'suspended') { try { quizAC.resume(); } catch (e) {} }
+  return quizAC;
+}
+function quizTone(f, d, delay, vol, type) {
+  const ac = quizAudio();
+  if (!ac) return;
+  try {
+    const t = ac.currentTime + (delay || 0);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol || 0.5, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(quizMaster);
+    o.start(t); o.stop(t + d + 0.05);
+  } catch (e) {}
+}
+window.sfxRight = function () { quizTone(660, .12, 0); setTimeout(function () { quizTone(880, .18, 0); }, 110); };
+window.sfxWrong = function () { quizTone(220, .28, 0, .3); setTimeout(function () { quizTone(170, .32, 0, .3); }, 120); };
+window.quizFeedback = function (correct) {
+  if (correct) { window.sfxRight(); } else { window.sfxWrong(); }
+  try { ttsSpeak(correct ? '答对了，太棒了！' : '继续加油，再想想！', '', 1.05); } catch (e) {}
+};
 
 /* ---------- 启动 ---------- */
 function init() {
